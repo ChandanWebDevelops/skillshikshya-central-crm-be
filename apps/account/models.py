@@ -27,7 +27,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name='Role (Permission Group)'
     )
     daily_call_target_min = models.IntegerField(null=True, blank=True)
-    monthly_sales_target = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    monthly_enrollment_target = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     designation = models.CharField(max_length=150, null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     shift_start = models.TimeField(null=True, blank=True)
@@ -43,7 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     work_sat = models.BooleanField(default=False)
 
     exclude_from_calls = models.BooleanField(default=False)
-    exclude_from_sales = models.BooleanField(default=False)
+    exclude_from_enrollment = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

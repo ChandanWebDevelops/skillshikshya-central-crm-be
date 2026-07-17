@@ -8,15 +8,89 @@ The Account app manages users, roles (groups), permissions, and JWT-based authen
 
 ---
 
-## Authentication (Cookie-based JWT)
+## Authentication Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login/` | Login — sets `access_token` + `refresh_token` cookies |
-| POST | `/api/auth/refresh/` | Refresh access token (reads refresh cookie automatically) |
-| POST | `/api/auth/logout/` | Logout — blacklists refresh token & clears cookies |
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| POST | `/api/auth/register/` | Register a new user & auto-login (sets cookies) | Admin or `account.add_user` permission |
+| POST | `/api/auth/login/` | Login — sets `access_token` + `refresh_token` cookies | Public |
+| POST | `/api/auth/refresh/` | Refresh access token (reads refresh cookie automatically) | Public |
+| POST | `/api/auth/logout/` | Logout — blacklists refresh token & clears cookies | Authenticated |
 
-> **No `Authorization: Bearer` header needed.** The `access_token` cookie is sent automatically by the browser. For tools like Postman, cookies are stored and sent automatically after login.
+> Login/Refresh/Logout are public or auto-authenticated via cookies. **Register requires admin or proper permission.**
+
+---
+
+### POST `/api/auth/register/` — Register & Auto-login
+
+Creates a new user and immediately issues JWT tokens as cookies.
+
+**Request:**
+```json
+{
+    "name": "Ram Sharma",
+    "email": "ram@skillskhikshya.com",
+    "password": "securepass123",
+    "phone": "9841234567",
+    "designation": "Sales Executive",
+    "daily_call_target_min": 50,
+    "monthly_enrollment_target": "500000.00",
+    "shift_start": "09:00:00",
+    "shift_end": "18:00:00",
+    "work_mon": true,
+    "work_tue": true,
+    "work_wed": true,
+    "work_thu": true,
+    "work_fri": true
+}
+```
+
+Only `name`, `email`, and `password` are required — all other fields are optional.
+
+**Response `201 Created`** — cookies set automatically:
+```json
+{
+    "message": "Registration successful",
+    "user": {
+        "id": 1,
+        "name": "Ram Sharma",
+        "email": "ram@skillskhikshya.com",
+        "role": null,
+        "daily_call_target_min": 50,
+        "monthly_enrollment_target": "500000.00",
+        "designation": "Sales Executive",
+        "phone": "9841234567",
+        "shift_start": "09:00:00",
+        "shift_end": "18:00:00",
+        "custom_weekly_offs": false,
+        "work_sun": false,
+        "work_mon": true,
+        "work_tue": true,
+        "work_wed": true,
+        "work_thu": true,
+        "work_fri": true,
+        "work_sat": false,
+        "exclude_from_calls": false,
+        "exclude_from_enrollment": false,
+        "is_active": true,
+        "is_staff": false,
+        "is_superuser": false,
+        "last_login": null
+    }
+}
+```
+
+**Cookies set (httpOnly, path=/):**
+| Cookie | Value |
+|--------|-------|
+| `access_token` | JWT access token (1hr expiry) |
+| `refresh_token` | JWT refresh token (7 day expiry) |
+
+> `password` is **write-only** — never returned. `is_staff` and `is_superuser` cannot be set via registration.
+>
+> **Auth required:** Only admins (`is_staff=True`) or users with `account.add_user` permission can register new users. Send `Authorization: Bearer <token>` or use existing session cookies.
+
+---
 
 ### POST `/api/auth/login/` — Login
 
@@ -35,17 +109,11 @@ The Account app manages users, roles (groups), permissions, and JWT-based authen
 }
 ```
 
-**Cookies set (httpOnly, path=/):**
-| Cookie | Value |
-|--------|-------|
-| `access_token` | JWT access token (1hr expiry) |
-| `refresh_token` | JWT refresh token (7 day expiry) |
-
 ### POST `/api/auth/refresh/` — Refresh Token
 
 The refresh token is automatically read from the `refresh_token` cookie. No body needed.
 
-**Request:** *(empty body or send `{}`)*
+**Request:** *(empty body or `{}`)*
 
 **Response `200 OK`** — new `access_token` cookie set:
 ```json
@@ -74,9 +142,9 @@ The refresh token is automatically read from the `refresh_token` cookie, blackli
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
 | GET | `/api/users/` | List users (paginated) | All authenticated |
-| POST | `/api/users/` | Create user | Staff |
+| ~~POST~~ | ~~`/api/users/`~~ | ~~Create user~~ | **Disabled — use `/api/auth/register/`** |
 | GET | `/api/users/{id}/` | Get user detail | Self or staff |
-| PUT | `/api/users/{id}/` | Full update | Self or staff |
+| PUT | `/api/users/{id}/` | Full update | Staff only |
 | PATCH | `/api/users/{id}/` | Partial update | Self or staff |
 | DELETE | `/api/users/{id}/` | Delete user | Staff only |
 
@@ -85,69 +153,6 @@ The refresh token is automatically read from the `refresh_token` cookie, blackli
 - **Regular users** → only see/update their own profile
 - `is_staff` & `is_superuser` are **read-only** in the API (set via Django admin or `createsuperuser`)
 - Results are paginated (default 20 per page, use `?page=2&page_size=50`)
-
-### POST `/api/users/` — Create User
-
-**Request:**
-```json
-{
-    "name": "Ram Sharma",
-    "email": "ram@skillskhikshya.com",
-    "password": "securepass123",
-    "role": null,
-    "daily_call_target_min": 50,
-    "monthly_sales_target": "500000.00",
-    "designation": "Sales Executive",
-    "phone": "9841234567",
-    "shift_start": "09:00:00",
-    "shift_end": "18:00:00",
-    "custom_weekly_offs": false,
-    "work_sun": false,
-    "work_mon": true,
-    "work_tue": true,
-    "work_wed": true,
-    "work_thu": true,
-    "work_fri": true,
-    "work_sat": false,
-    "exclude_from_calls": false,
-    "exclude_from_sales": false,
-    "is_active": true
-}
-```
-
-> `is_staff` and `is_superuser` cannot be set here. Only `role` (group FK), not `groups` or `user_permissions`.
-
-**Response `201 Created`:**
-```json
-{
-    "id": 1,
-    "name": "Ram Sharma",
-    "email": "ram@skillskhikshya.com",
-    "role": null,
-    "daily_call_target_min": 50,
-    "monthly_sales_target": "500000.00",
-    "designation": "Sales Executive",
-    "phone": "9841234567",
-    "shift_start": "09:00:00",
-    "shift_end": "18:00:00",
-    "custom_weekly_offs": false,
-    "work_sun": false,
-    "work_mon": true,
-    "work_tue": true,
-    "work_wed": true,
-    "work_thu": true,
-    "work_fri": true,
-    "work_sat": false,
-    "exclude_from_calls": false,
-    "exclude_from_sales": false,
-    "is_active": true,
-    "is_staff": false,
-    "is_superuser": false,
-    "last_login": null
-}
-```
-
-> `password` is **write-only** — never returned.
 
 ### GET `/api/users/` — List Users
 
@@ -164,7 +169,7 @@ The refresh token is automatically read from the `refresh_token` cookie, blackli
             "email": "ram@skillskhikshya.com",
             "role": null,
             "daily_call_target_min": 50,
-            "monthly_sales_target": "500000.00",
+            "monthly_enrollment_target": "500000.00",
             "designation": "Sales Executive",
             "phone": "9841234567",
             "shift_start": "09:00:00",
@@ -178,7 +183,7 @@ The refresh token is automatically read from the `refresh_token` cookie, blackli
             "work_fri": true,
             "work_sat": false,
             "exclude_from_calls": false,
-            "exclude_from_sales": false,
+            "exclude_from_enrollment": false,
             "is_active": true,
             "is_staff": false,
             "is_superuser": false,
@@ -218,7 +223,7 @@ When `role` is set, the user is automatically added to that group's permissions.
 | PATCH | `/api/groups/{id}/` | Partial update group | Admin only |
 | DELETE | `/api/groups/{id}/` | Delete group | Admin only |
 
-> Only **admin users** (`is_staff=True`) can manage groups. Regular users see nothing here.
+> Only **admin users** (`is_staff=True`) can manage groups.
 
 ### POST `/api/groups/` — Create a Role Group
 
@@ -229,8 +234,6 @@ When `role` is set, the user is automatically added to that group's permissions.
     "permissions": [1, 2, 3]
 }
 ```
-
-`permissions` is a list of permission IDs to assign to this group.
 
 **Response `201 Created`:**
 ```json
@@ -259,7 +262,6 @@ When `role` is set, the user is automatically added to that group's permissions.
 
 ### GET `/api/permissions/` — List Permissions
 
-**Response:**
 ```json
 {
     "count": 100,
@@ -283,7 +285,7 @@ Use the `id` from here when assigning permissions to a group.
 
 | User type | Access |
 |-----------|--------|
-| **Staff** (`is_staff=True`) | Full access — all CRUD on users, groups, permissions, config |
+| **Staff** (`is_staff=True`) | Full access — all CRUD on users, groups, permissions |
 | **Regular user** with role | Limited by their `role` group's assigned Django permissions |
 | **Regular user** no role | Can only view/update their own profile |
 
@@ -303,7 +305,7 @@ docker compose exec web python manage.py createsuperuser
 # Password: admin123
 ```
 
-### 2. Login (cookies set automatically)
+### 2. Admin: Login
 
 ```
 POST http://localhost:8188/api/auth/login/
@@ -315,7 +317,33 @@ Content-Type: application/json
 }
 ```
 
-### 3. Create a Role Group with Permissions
+### 3. Admin: Register a New User
+
+```
+POST http://localhost:8188/api/auth/register/
+Content-Type: application/json
+
+{
+    "name": "Sita Poudel",
+    "email": "sita@skillskhikshya.com",
+    "password": "sita@123",
+    "phone": "9876543210",
+    "designation": "Call Agent",
+    "daily_call_target_min": 40,
+    "monthly_enrollment_target": "300000.00",
+    "shift_start": "10:00:00",
+    "shift_end": "19:00:00",
+    "work_mon": true,
+    "work_tue": true,
+    "work_wed": true,
+    "work_thu": true,
+    "work_fri": true
+}
+```
+
+Cookies are set automatically on success.
+
+### 4. Admin: Create Role Group & Assign Permissions
 
 ```
 POST http://localhost:8188/api/groups/
@@ -327,46 +355,22 @@ Content-Type: application/json
 }
 ```
 
-### 4. Create a User with that Role
-
-```
-POST http://localhost:8188/api/users/
-Content-Type: application/json
-
-{
-    "name": "Sita Poudel",
-    "email": "sita@skillskhikshya.com",
-    "password": "sita@123",
-    "role": 1,
-    "designation": "Call Agent",
-    "daily_call_target_min": 40,
-    "monthly_sales_target": "300000.00",
-    "shift_start": "10:00:00",
-    "shift_end": "19:00:00",
-    "work_mon": true,
-    "work_tue": true,
-    "work_wed": true,
-    "work_thu": true,
-    "work_fri": true
-}
-```
-
-### 5. List Users (paginated)
-
-```
-GET http://localhost:8188/api/users/?page=1&page_size=10
-```
-
-### 6. Update a User's Role
+### 5. Admin: Assign Role to User
 
 ```
 PATCH http://localhost:8188/api/users/2/
 Content-Type: application/json
 
 {
-    "role": 2,
+    "role": 1,
     "designation": "Senior Call Agent"
 }
+```
+
+### 6. List Users (paginated)
+
+```
+GET http://localhost:8188/api/users/?page=1&page_size=10
 ```
 
 ### 7. Refresh Token
@@ -388,26 +392,27 @@ POST http://localhost:8188/api/auth/logout/
 ### Setup
 
 1. Open Postman → New Collection → **Skillshikshya CRM**
-2. Go to Collection **Variables** tab and add:
+2. Go to Collection **Variables** tab:
 
 | Variable | Initial Value |
 |----------|--------------|
 | `base_url` | `http://localhost:8188` |
 | `user_id` | *(leave empty)* |
+| `group_id` | *(leave empty)* |
 
-> **No need for `access_token`/`refresh_token` variables.** Postman manages cookies automatically.
+> **Cookies handled automatically** — Postman stores/sends them after login/register.
 
-### Enable Cookie Handling in Postman
+### Enable Cookie Handling
+1. Click **Cookies** (top-right under "Send")
+2. Add `localhost:8188` to domain list
 
-1. Click the **Cookies** button (top-right under "Send")
-2. Add `localhost:8188` to the domain list
-3. Postman will automatically store and send cookies for all requests
+---
 
-### 1. Login
+### 1. Admin Login
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/login/`
-- **Body (raw JSON):**
+- **Body:**
   ```json
   {
       "email": "admin@skillskhikshya.com",
@@ -415,19 +420,63 @@ POST http://localhost:8188/api/auth/logout/
   }
   ```
 
-**Tests tab:**
+**Tests:**
 ```javascript
-pm.test("Login successful", function () {
+pm.test("Admin login", function () {
     pm.response.to.have.status(200);
-    pm.expect(pm.response.json().message).to.eql("Login successful");
 });
 ```
 
-### 2. Create Role Group
+### 2. Admin: Register a New User
+
+- **Method:** POST
+- **URL:** `{{base_url}}/api/auth/register/`
+- **Headers:**
+  - `X-CSRFTOKEN`: *(leave empty — cookies handle auth)*
+- **Body (raw JSON):**
+  ```json
+  {
+      "name": "Test User",
+      "email": "test@skillskhikshya.com",
+      "password": "test123",
+      "designation": "Agent",
+      "daily_call_target_min": 30,
+      "monthly_enrollment_target": "200000.00",
+      "shift_start": "09:00:00",
+      "shift_end": "18:00:00"
+  }
+  ```
+
+**Tests tab:**
+```javascript
+pm.test("Registration successful", function () {
+    pm.response.to.have.status(201);
+    var json = pm.response.json();
+    pm.expect(json.message).to.eql("Registration successful");
+    pm.expect(json.user.email).to.eql("test@skillskhikshya.com");
+    pm.collectionVariables.set("user_id", json.user.id);
+});
+```
+
+### 3. List Users
+
+- **Method:** GET
+- **URL:** `{{base_url}}/api/users/`
+
+**Tests:**
+```javascript
+pm.test("Paginated users", function () {
+    pm.response.to.have.status(200);
+    pm.expect(pm.response.json()).to.have.property("results");
+    pm.expect(pm.response.json()).to.have.property("count");
+});
+```
+
+### 4. Create Role Group
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/groups/`
-- **Body (raw JSON):**
+- **Body:**
   ```json
   {
       "name": "Call Agent",
@@ -443,57 +492,11 @@ pm.test("Group created", function () {
 });
 ```
 
-### 3. Create User
-
-- **Method:** POST
-- **URL:** `{{base_url}}/api/users/`
-- **Body (raw JSON):**
-  ```json
-  {
-      "name": "Test User",
-      "email": "test@skillskhikshya.com",
-      "password": "test123",
-      "role": null,
-      "designation": "Agent",
-      "daily_call_target_min": 30,
-      "monthly_sales_target": "200000.00",
-      "shift_start": "09:00:00",
-      "shift_end": "18:00:00"
-  }
-  ```
-
-**Tests:**
-```javascript
-pm.test("User created", function () {
-    pm.response.to.have.status(201);
-    pm.collectionVariables.set("user_id", pm.response.json().id);
-});
-```
-
-### 4. List Users
-
-- **Method:** GET
-- **URL:** `{{base_url}}/api/users/`
-
-**Tests:**
-```javascript
-pm.test("Users list paginated", function () {
-    pm.response.to.have.status(200);
-    pm.expect(pm.response.json()).to.have.property("results");
-    pm.expect(pm.response.json()).to.have.property("count");
-});
-```
-
-### 5. Get Single User
-
-- **Method:** GET
-- **URL:** `{{base_url}}/api/users/{{user_id}}`
-
-### 6. Assign Role to User (PATCH)
+### 5. Assign Role to User
 
 - **Method:** PATCH
 - **URL:** `{{base_url}}/api/users/{{user_id}}`
-- **Body (raw JSON):**
+- **Body:**
   ```json
   {
       "role": {{group_id}}
@@ -504,17 +507,15 @@ pm.test("Users list paginated", function () {
 ```javascript
 pm.test("Role assigned", function () {
     pm.response.to.have.status(200);
-    pm.expect(pm.response.json().role).to.eql(parseInt(pm.collectionVariables.get("group_id")));
 });
 ```
 
-### 7. Delete User
+### 6. Get Single User
 
-- **Method:** DELETE
+- **Method:** GET
 - **URL:** `{{base_url}}/api/users/{{user_id}}`
-- **Expected status:** `204 No Content`
 
-### 8. Refresh Token
+### 7. Refresh Token
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/refresh/`
@@ -526,7 +527,7 @@ pm.test("Token refreshed", function () {
 });
 ```
 
-### 9. Logout
+### 8. Logout
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/logout/`
@@ -544,11 +545,11 @@ pm.test("Logged out", function () {
 ```
 Skillshikshya CRM
 ├── Auth
+│   ├── Register
 │   ├── Login
 │   ├── Refresh Token
 │   └── Logout
 ├── Users
-│   ├── Create User
 │   ├── List Users
 │   ├── Get User
 │   ├── Assign Role (PATCH)

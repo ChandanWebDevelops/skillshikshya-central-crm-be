@@ -1,10 +1,44 @@
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
     TokenBlacklistView,
 )
+from apps.account.models import User
+from apps.account.serializers.user_serializer import UserSerializer
+from apps.global_config.permissions import IsStaffOrHasPermission
+
+
+class RegisterView(APIView):
+    permission_classes = [IsStaffOrHasPermission]
+    queryset = User.objects.none()
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+
+        response = Response(
+            {
+                'message': 'Registration successful',
+                'user': UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+        response.set_cookie(
+            'access_token', str(refresh.access_token),
+            httponly=True, samesite='Lax', path='/',
+        )
+        response.set_cookie(
+            'refresh_token', str(refresh),
+            httponly=True, samesite='Lax', path='/',
+        )
+        return response
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):

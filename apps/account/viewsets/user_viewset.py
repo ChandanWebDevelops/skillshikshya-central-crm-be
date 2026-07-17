@@ -10,11 +10,12 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     pagination_class = StandardResultsSetPagination
+    http_method_names = ['get', 'put', 'patch', 'delete', 'head', 'options']
 
     def get_permissions(self):
         if self.action == 'destroy':
             permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
-        elif self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ['update', 'partial_update']:
             permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
         elif self.action in ['retrieve', 'list']:
             permission_classes = [IsAuthenticated]
