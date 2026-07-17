@@ -16,6 +16,10 @@ The Account app manages users, roles (groups), permissions, and JWT-based authen
 | POST | `/api/auth/login/` | Login — sets `access_token` + `refresh_token` cookies | Public |
 | POST | `/api/auth/refresh/` | Refresh access token (reads refresh cookie automatically) | Public |
 | POST | `/api/auth/logout/` | Logout — blacklists refresh token & clears cookies | Authenticated |
+| POST | `/api/auth/change-password/` | Change current user's password | Authenticated |
+| POST | `/api/auth/forgot-password/` | Request password reset OTP via email | Public |
+| POST | `/api/auth/verify-otp/` | Verify OTP for password reset | Public |
+| POST | `/api/auth/reset-password/` | Reset password after OTP verification | Public |
 
 > Login/Refresh/Logout are public or auto-authenticated via cookies. **Register requires admin or proper permission.**
 
@@ -134,6 +138,113 @@ The refresh token is automatically read from the `refresh_token` cookie, blackli
     "message": "Logged out successfully"
 }
 ```
+
+---
+
+### POST `/api/auth/change-password/` — Change Password
+
+Updates the authenticated user's password. Requires the old password for verification.
+
+**Headers:**
+```
+Content-Type: application/json
+```
+*(Auth via cookies — no Bearer header needed)*
+
+**Request:**
+```json
+{
+    "old_password": "currentPassword123",
+    "new_password": "newSecurePass456",
+    "confirm_new_password": "newSecurePass456"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+    "detail": "Password changed successfully."
+}
+```
+
+A confirmation email is sent asynchronously via Celery.
+
+**Error responses:**
+- `400` — Old password is incorrect
+- `400` — New passwords do not match
+
+---
+
+### POST `/api/auth/forgot-password/` — Request OTP
+
+Sends a 6-digit OTP to the user's email for password reset. Always returns the same response (whether the email exists or not) to prevent email enumeration.
+
+**Request:**
+```json
+{
+    "email": "user@skillskhikshya.com"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+    "detail": "If this email exists, an OTP has been sent."
+}
+```
+
+The OTP email uses a **green theme** with **Skill Shikshya** branding. OTPs expire in **15 minutes**.
+
+---
+
+### POST `/api/auth/verify-otp/` — Verify OTP
+
+Validates the OTP sent to the user's email. Must be called before resetting the password.
+
+**Request:**
+```json
+{
+    "email": "user@skillskhikshya.com",
+    "otp": "483921"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+    "detail": "OTP verified successfully."
+}
+```
+
+**Error responses:**
+- `400` — Invalid or expired OTP
+
+---
+
+### POST `/api/auth/reset-password/` — Reset Password
+
+Resets the password after successful OTP verification. Requires the same email used in `verify-otp`.
+
+**Request:**
+```json
+{
+    "email": "user@skillskhikshya.com",
+    "new_password": "newSecurePass456",
+    "confirm_new_password": "newSecurePass456"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+    "detail": "Password reset successfully."
+}
+```
+
+**Error responses:**
+- `400` — OTP not verified or expired
+- `400` — New passwords do not match
+- `404` — User not found
 
 ---
 
@@ -373,13 +484,61 @@ Content-Type: application/json
 GET http://localhost:8188/api/users/?page=1&page_size=10
 ```
 
-### 7. Refresh Token
+### 7. Change Password
+
+```
+POST http://localhost:8188/api/auth/change-password/
+Content-Type: application/json
+
+{
+    "old_password": "currentPassword123",
+    "new_password": "newSecurePass456",
+    "confirm_new_password": "newSecurePass456"
+}
+```
+
+### 8. Forgot Password (OTP flow)
+
+**Step 1 — Request OTP:**
+```
+POST http://localhost:8188/api/auth/forgot-password/
+Content-Type: application/json
+
+{
+    "email": "sita@skillskhikshya.com"
+}
+```
+
+**Step 2 — Verify OTP:**
+```
+POST http://localhost:8188/api/auth/verify-otp/
+Content-Type: application/json
+
+{
+    "email": "sita@skillskhikshya.com",
+    "otp": "483921"
+}
+```
+
+**Step 3 — Reset Password:**
+```
+POST http://localhost:8188/api/auth/reset-password/
+Content-Type: application/json
+
+{
+    "email": "sita@skillskhikshya.com",
+    "new_password": "newSecurePass456",
+    "confirm_new_password": "newSecurePass456"
+}
+```
+
+### 9. Refresh Token
 
 ```
 POST http://localhost:8188/api/auth/refresh/
 ```
 
-### 8. Logout
+### 10. Logout
 
 ```
 POST http://localhost:8188/api/auth/logout/
@@ -515,7 +674,46 @@ pm.test("Role assigned", function () {
 - **Method:** GET
 - **URL:** `{{base_url}}/api/users/{{user_id}}`
 
-### 7. Refresh Token
+### 7. Change Password
+
+- **Method:** POST
+- **URL:** `{{base_url}}/api/auth/change-password/`
+- **Body (raw JSON):**
+  ```json
+  {
+      "old_password": "test123",
+      "new_password": "newTestPass456",
+      "confirm_new_password": "newTestPass456"
+  }
+  ```
+
+**Tests:**
+```javascript
+pm.test("Password changed", function () {
+    pm.response.to.have.status(200);
+    pm.expect(pm.response.json().detail).to.eql("Password changed successfully.");
+});
+```
+
+### 8. Forgot Password — Request OTP
+
+- **Method:** POST
+- **URL:** `{{base_url}}/api/auth/forgot-password/`
+- **Body:**
+  ```json
+  {
+      "email": "test@skillskhikshya.com"
+  }
+  ```
+
+**Tests:**
+```javascript
+pm.test("OTP sent", function () {
+    pm.response.to.have.status(200);
+});
+```
+
+### 10. Refresh Token
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/refresh/`
@@ -527,7 +725,7 @@ pm.test("Token refreshed", function () {
 });
 ```
 
-### 8. Logout
+### 11. Logout
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/logout/`
@@ -548,7 +746,11 @@ Skillshikshya CRM
 │   ├── Register
 │   ├── Login
 │   ├── Refresh Token
-│   └── Logout
+│   ├── Logout
+│   ├── Change Password
+│   ├── Forgot Password (Request OTP)
+│   ├── Verify OTP
+│   └── Reset Password
 ├── Users
 │   ├── List Users
 │   ├── Get User

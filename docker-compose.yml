@@ -19,6 +19,13 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7
+    container_name: skillshikshyacrm_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   web:
     build: .
     container_name: skillshikshyacrm_web
@@ -40,9 +47,34 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery_worker:
+    build: .
+    container_name: skillshikshyacrm_celery
+    restart: unless-stopped
+    command: celery -A skillshikshyacrm worker -l info
+    volumes:
+      - .:/app
+    environment:
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      DB_ENGINE: ${DB_ENGINE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
 
 volumes:
   postgres_data:
