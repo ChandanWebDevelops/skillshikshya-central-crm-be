@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
@@ -24,11 +24,6 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255)
     email = models.EmailField(max_length=255, unique=True)
-    role = models.ForeignKey(
-        Group, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='role_users',
-        verbose_name='Role (Permission Group)'
-    )
     daily_call_target_min = models.IntegerField(null=True, blank=True)
     monthly_enrollment_target = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     designation = models.CharField(max_length=150, null=True, blank=True)

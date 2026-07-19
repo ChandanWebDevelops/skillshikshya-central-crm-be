@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import (
 )
 from apps.account.models import OTP, User
 from apps.account.serializers.auth_serializers import CustomTokenObtainPairSerializer
-from apps.account.serializers.user_serializer import UserSerializer
+from apps.account.serializers.user_serializer import UserSerializer, UserMiniSerializer
 from apps.account.tasks import send_otp_email_task, send_password_changed_email_task
 from apps.global_config.permissions import IsStaffOrHasPermission
 
@@ -52,7 +52,8 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         serializer.is_valid(raise_exception=True)
 
         response = Response(
-            {'message': 'Login successful'},
+            # {'message': 'Login successful'},
+            {'message': 'Login successful', 'user': UserMiniSerializer(serializer.user).data},
             status=status.HTTP_200_OK,
         )
         self._set_cookies(response, serializer.validated_data)

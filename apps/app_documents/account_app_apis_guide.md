@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Account app manages users, roles (groups), permissions, and JWT-based authentication. Tokens are set as **httpOnly cookies** (not returned in the body) for secure, simple use.
+The Account app manages users, groups (roles), permissions, and JWT-based authentication. Tokens are set as **httpOnly cookies** (not returned in the body) for secure, simple use.
 
 **Base URL:** `http://localhost:8188`
 
@@ -59,7 +59,6 @@ Only `name`, `email`, and `password` are required — all other fields are optio
         "id": 1,
         "name": "Ram Sharma",
         "email": "ram@skillskhikshya.com",
-        "role": null,
         "daily_call_target_min": 50,
         "monthly_enrollment_target": "500000.00",
         "designation": "Sales Executive",
@@ -79,6 +78,7 @@ Only `name`, `email`, and `password` are required — all other fields are optio
         "is_active": true,
         "is_staff": false,
         "is_superuser": false,
+        "groups": [],
         "last_login": null
     }
 }
@@ -109,7 +109,16 @@ Only `name`, `email`, and `password` are required — all other fields are optio
 **Response `200 OK`** — cookies set automatically:
 ```json
 {
-    "message": "Login successful"
+    "message": "Login successful",
+    "user": {
+        "id": 1,
+        "name": "Admin",
+        "email": "admin@skillskhikshya.com",
+        "is_staff": true,
+        "is_superuser": true,
+        "groups": [1],
+        "user_permissions": []
+    }
 }
 ```
 
@@ -278,10 +287,9 @@ Resets the password after successful OTP verification. Requires the same email u
             "id": 1,
             "name": "Ram Sharma",
             "email": "ram@skillskhikshya.com",
-            "role": null,
-            "daily_call_target_min": 50,
-            "monthly_enrollment_target": "500000.00",
-            "designation": "Sales Executive",
+        "daily_call_target_min": 50,
+        "monthly_enrollment_target": "500000.00",
+        "designation": "Sales Executive",
             "phone": "9841234567",
             "shift_start": "09:00:00",
             "shift_end": "18:00:00",
@@ -306,16 +314,16 @@ Resets the password after successful OTP verification. Requires the same email u
 
 **Query params:** `?page=1&page_size=20`
 
-### PATCH `/api/users/{id}/` — Partial Update (assign role)
+### PATCH `/api/users/{id}/` — Partial Update (assign groups)
 
 ```json
 {
-    "role": 2,
+    "groups": [2],
     "daily_call_target_min": 75
 }
 ```
 
-When `role` is set, the user is automatically added to that group's permissions.
+When `groups` is set, the user is assigned to those permission groups (replaces any existing group memberships).
 
 ### DELETE `/api/users/{id}/` — Delete User
 
@@ -323,7 +331,7 @@ When `role` is set, the user is automatically added to that group's permissions.
 
 ---
 
-## Role (Group) Endpoints
+## Group (Role) Endpoints
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
@@ -397,11 +405,11 @@ Use the `id` from here when assigning permissions to a group.
 | User type | Access |
 |-----------|--------|
 | **Staff** (`is_staff=True`) | Full access — all CRUD on users, groups, permissions |
-| **Regular user** with role | Limited by their `role` group's assigned Django permissions |
-| **Regular user** no role | Can only view/update their own profile |
+| **Regular user** with groups | Limited by their groups' assigned Django permissions |
+| **Regular user** no groups | Can only view/update their own profile |
 
-- `role` FK → auto-synced to Django's `groups` M2M for permission checking
-- Non-staff users **cannot** change their own `role`, `is_staff`, or `is_superuser`
+- `groups` is a **M2M** field — users can belong to multiple groups
+- Non-staff users **cannot** change their own `is_staff` or `is_superuser`
 
 ---
 
@@ -466,17 +474,19 @@ Content-Type: application/json
 }
 ```
 
-### 5. Admin: Assign Role to User
+### 5. Admin: Assign Groups to User
 
 ```
 PATCH http://localhost:8188/api/users/2/
 Content-Type: application/json
 
 {
-    "role": 1,
+    "groups": [1],
     "designation": "Senior Call Agent"
 }
 ```
+
+To assign multiple groups: `"groups": [1, 2, 3]`
 
 ### 6. List Users (paginated)
 
@@ -583,6 +593,8 @@ POST http://localhost:8188/api/auth/logout/
 ```javascript
 pm.test("Admin login", function () {
     pm.response.to.have.status(200);
+    var json = pm.response.json();
+    pm.expect(json.user).to.have.property("groups");
 });
 ```
 
@@ -651,20 +663,20 @@ pm.test("Group created", function () {
 });
 ```
 
-### 5. Assign Role to User
+### 5. Assign Groups to User
 
 - **Method:** PATCH
 - **URL:** `{{base_url}}/api/users/{{user_id}}`
 - **Body:**
   ```json
   {
-      "role": {{group_id}}
+      "groups": [{{group_id}}]
   }
   ```
 
 **Tests:**
 ```javascript
-pm.test("Role assigned", function () {
+pm.test("Groups assigned", function () {
     pm.response.to.have.status(200);
 });
 ```
@@ -754,7 +766,7 @@ Skillshikshya CRM
 ├── Users
 │   ├── List Users
 │   ├── Get User
-│   ├── Assign Role (PATCH)
+│   ├── Assign Groups (PATCH)
 │   └── Delete User
 └── Roles & Permissions
     ├── Create Role Group
