@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
     TokenBlacklistView,
 )
 from apps.account.models import OTP, User
+from apps.account.serializers.auth_serializers import CustomTokenObtainPairSerializer
 from apps.account.serializers.user_serializer import UserSerializer
 from apps.account.tasks import send_otp_email_task, send_password_changed_email_task
 from apps.global_config.permissions import IsStaffOrHasPermission
@@ -44,6 +45,8 @@ class RegisterView(APIView):
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
