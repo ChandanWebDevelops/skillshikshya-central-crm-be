@@ -17,9 +17,8 @@ The Account app manages users, groups (roles), permissions, and JWT-based authen
 | POST | `/api/auth/refresh/` | Refresh access token (reads refresh cookie automatically) | Public |
 | POST | `/api/auth/logout/` | Logout — blacklists refresh token & clears cookies | Authenticated |
 | POST | `/api/auth/change-password/` | Change current user's password | Authenticated |
-| POST | `/api/auth/forgot-password/` | Request password reset OTP via email | Public |
-| POST | `/api/auth/verify-otp/` | Verify OTP for password reset | Public |
-| POST | `/api/auth/reset-password/` | Reset password after OTP verification | Public |
+| POST | `/api/auth/forgot-password/` | Request password reset link via email | Public |
+| POST | `/api/auth/reset-password/` | Reset password using signed link (uid + token) | Public |
 
 > Login/Refresh/Logout are public or auto-authenticated via cookies. **Register requires admin or proper permission.**
 
@@ -184,9 +183,9 @@ A confirmation email is sent asynchronously via Celery.
 
 ---
 
-### POST `/api/auth/forgot-password/` — Request OTP
+### POST `/api/auth/forgot-password/` — Request Reset Link
 
-Sends a 6-digit OTP to the user's email for password reset. Always returns the same response (whether the email exists or not) to prevent email enumeration.
+Sends a signed one-time password reset link to the user's email. Always returns the same response (whether the email exists or not) to prevent email enumeration.
 
 **Request:**
 ```json
@@ -198,46 +197,25 @@ Sends a 6-digit OTP to the user's email for password reset. Always returns the s
 **Response `200 OK`:**
 ```json
 {
-    "detail": "If this email exists, an OTP has been sent."
+    "detail": "If this email exists, a password reset link has been sent."
 }
 ```
 
-The OTP email uses a **green theme** with **Skill Shikshya** branding. OTPs expire in **15 minutes**.
+> In **DEBUG mode**, the response also includes the `reset_link` field for easy testing.
 
----
-
-### POST `/api/auth/verify-otp/` — Verify OTP
-
-Validates the OTP sent to the user's email. Must be called before resetting the password.
-
-**Request:**
-```json
-{
-    "email": "user@skillskhikshya.com",
-    "otp": "483921"
-}
-```
-
-**Response `200 OK`:**
-```json
-{
-    "detail": "OTP verified successfully."
-}
-```
-
-**Error responses:**
-- `400` — Invalid or expired OTP
+The email contains a **"Reset Password" button** linking to the frontend. Links expire in **15 minutes** and are automatically invalidated after use (the token is cryptographically signed using the user's password hash — changing the password invalidates the token).
 
 ---
 
 ### POST `/api/auth/reset-password/` — Reset Password
 
-Resets the password after successful OTP verification. Requires the same email used in `verify-otp`.
+Resets the password using the uid and token from the reset link. Extract `uid` and `token` from the link's query parameters (`?uid=...&token=...`).
 
 **Request:**
 ```json
 {
-    "email": "user@skillskhikshya.com",
+    "uid": "MQ",
+    "token": "dc00e0-21990482aa9b08f65448d2ec23724679",
     "new_password": "newSecurePass456",
     "confirm_new_password": "newSecurePass456"
 }
@@ -250,10 +228,13 @@ Resets the password after successful OTP verification. Requires the same email u
 }
 ```
 
+A confirmation email is sent asynchronously via Celery after the password is reset.
+
 **Error responses:**
-- `400` — OTP not verified or expired
+- `400` — All fields are required: uid, token, new_password, confirm_new_password
 - `400` — New passwords do not match
-- `404` — User not found
+- `400` — Invalid reset link
+- `400` — Invalid or expired reset link
 
 ---
 
@@ -507,9 +488,9 @@ Content-Type: application/json
 }
 ```
 
-### 8. Forgot Password (OTP flow)
+### 8. Forgot Password (Reset link flow)
 
-**Step 1 — Request OTP:**
+**Step 1 — Request Reset Link:**
 ```
 POST http://localhost:8188/api/auth/forgot-password/
 Content-Type: application/json
@@ -519,24 +500,22 @@ Content-Type: application/json
 }
 ```
 
-**Step 2 — Verify OTP:**
-```
-POST http://localhost:8188/api/auth/verify-otp/
-Content-Type: application/json
-
+Response includes `reset_link` in DEBUG mode:
+```json
 {
-    "email": "sita@skillskhikshya.com",
-    "otp": "483921"
+    "detail": "If this email exists, a password reset link has been sent.",
+    "reset_link": "http://localhost:5173/reset-password?uid=Mg&token=abc123..."
 }
 ```
 
-**Step 3 — Reset Password:**
+**Step 2 — Reset Password (extract uid & token from the link):**
 ```
 POST http://localhost:8188/api/auth/reset-password/
 Content-Type: application/json
 
 {
-    "email": "sita@skillskhikshya.com",
+    "uid": "Mg",
+    "token": "abc123...",
     "new_password": "newSecurePass456",
     "confirm_new_password": "newSecurePass456"
 }
@@ -707,7 +686,7 @@ pm.test("Password changed", function () {
 });
 ```
 
-### 8. Forgot Password — Request OTP
+### 8. Forgot Password — Request Reset Link
 
 - **Method:** POST
 - **URL:** `{{base_url}}/api/auth/forgot-password/`
@@ -720,8 +699,36 @@ pm.test("Password changed", function () {
 
 **Tests:**
 ```javascript
-pm.test("OTP sent", function () {
+pm.test("Reset link sent", function () {
     pm.response.to.have.status(200);
+    var json = pm.response.json();
+    if (json.reset_link) {
+        var params = json.reset_link.split('?')[1].split('&');
+        pm.collectionVariables.set("uid", params[0].split('=')[1]);
+        pm.collectionVariables.set("token", params[1].split('=')[1]);
+    }
+});
+```
+
+### 9. Reset Password (from link)
+
+- **Method:** POST
+- **URL:** `{{base_url}}/api/auth/reset-password/`
+- **Body:**
+  ```json
+  {
+      "uid": "{{uid}}",
+      "token": "{{token}}",
+      "new_password": "newTestPass456",
+      "confirm_new_password": "newTestPass456"
+  }
+  ```
+
+**Tests:**
+```javascript
+pm.test("Password reset", function () {
+    pm.response.to.have.status(200);
+    pm.expect(pm.response.json().detail).to.eql("Password reset successfully.");
 });
 ```
 
@@ -760,8 +767,7 @@ Skillshikshya CRM
 │   ├── Refresh Token
 │   ├── Logout
 │   ├── Change Password
-│   ├── Forgot Password (Request OTP)
-│   ├── Verify OTP
+│   ├── Forgot Password (Request Link)
 │   └── Reset Password
 ├── Users
 │   ├── List Users

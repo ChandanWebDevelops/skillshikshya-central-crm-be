@@ -82,3 +82,7 @@ env/
 
 # Docker
 *.pid
+
+
+# Backup files
+backup/

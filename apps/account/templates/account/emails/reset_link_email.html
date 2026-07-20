@@ -13,16 +13,22 @@
     <tr>
       <td style="padding: 30px 40px 20px;">
         <p style="color: #333; font-size: 15px; line-height: 1.6;">Dear <strong style="color: #2e7d32;">User</strong>,</p>
-        <p style="color: #555; font-size: 14px; line-height: 1.6;">You requested a password reset. Use the OTP below to reset your password. It expires in <strong>15 minutes</strong>.</p>
+        <p style="color: #555; font-size: 14px; line-height: 1.6;">You requested a password reset. Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p>
       </td>
     </tr>
 
     <tr>
-      <td style="padding: 0 40px 20px;">
-        <div style="background: #f1f8e9; border-radius: 8px; padding: 24px; text-align: center;">
-          <p style="color: #555; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 2px;">One-Time Password</p>
-          <p style="font-size: 42px; font-weight: bold; letter-spacing: 12px; color: #2e7d32; font-family: monospace; margin: 0;">{{ otp }}</p>
-        </div>
+      <td style="padding: 0 40px 20px; text-align: center;">
+        <a href="{{ reset_link }}" style="display: inline-block; background: #2e7d32; color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-size: 16px; font-weight: bold;">Reset Password</a>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 0 40px 10px;">
+        <p style="color: #777; font-size: 13px; line-height: 1.5; text-align: center;">
+          Or copy this link into your browser:<br>
+          <a href="{{ reset_link }}" style="color: #2e7d32; word-break: break-all;">{{ reset_link }}</a>
+        </p>
       </td>
     </tr>
 
@@ -30,7 +36,7 @@
       <td style="padding: 0 40px 20px;">
         <div style="background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px; padding: 16px 20px;">
           <p style="color: #e65100; margin: 0; font-size: 13px; line-height: 1.5;">
-            <strong>⚠ Important:</strong> If you didn't request this, ignore this email. Do not share this OTP with anyone.
+            <strong>⚠ Important:</strong> If you didn't request this, ignore this email. Do not share this link with anyone.
           </p>
         </div>
       </td>

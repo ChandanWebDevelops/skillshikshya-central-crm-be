@@ -1,3 +1,8 @@
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -8,10 +13,10 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenBlacklistView,
 )
-from apps.account.models import OTP, User
+from apps.account.models import User
 from apps.account.serializers.auth_serializers import CustomTokenObtainPairSerializer
 from apps.account.serializers.user_serializer import UserSerializer, UserMiniSerializer
-from apps.account.tasks import send_otp_email_task, send_password_changed_email_task
+from apps.account.tasks import send_password_changed_email_task, send_reset_link_email_task
 from apps.global_config.permissions import IsStaffOrHasPermission
 
 
@@ -52,7 +57,6 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         serializer.is_valid(raise_exception=True)
 
         response = Response(
-            # {'message': 'Login successful'},
             {'message': 'Login successful', 'user': UserMiniSerializer(serializer.user).data},
             status=status.HTTP_200_OK,
         )
@@ -172,64 +176,35 @@ class ForgotPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Always return same response regardless of whether email exists
+        response_data = {
+            'detail': 'If this email exists, a password reset link has been sent.'
+        }
+
         if User.objects.filter(email=email).exists():
-            import random
-            otp_code = ''.join(str(random.randint(0, 9)) for _ in range(6))
-            OTP.objects.create(email=email, otp=otp_code)
-            send_otp_email_task.delay(email, otp_code)
+            user = User.objects.get(email=email)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+            send_reset_link_email_task.delay(email, reset_link)
 
-        return Response(
-            {'detail': 'If this email exists, an OTP has been sent.'},
-            status=status.HTTP_200_OK,
-        )
+            if settings.DEBUG:
+                response_data['reset_link'] = reset_link
 
-
-class VerifyOTPView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email')
-        otp_code = request.data.get('otp')
-
-        if not email or not otp_code:
-            return Response(
-                {'detail': 'Email and OTP are required.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        otp_obj = OTP.objects.filter(
-            email=email,
-            otp=otp_code,
-            is_verified=False,
-        ).first()
-
-        if not otp_obj or otp_obj.is_expired():
-            return Response(
-                {'detail': 'Invalid or expired OTP.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        otp_obj.is_verified = True
-        otp_obj.save()
-
-        return Response(
-            {'detail': 'OTP verified successfully.'},
-            status=status.HTTP_200_OK,
-        )
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        uid = request.data.get('uid')
+        token = request.data.get('token')
         new_password = request.data.get('new_password')
         confirm_new_password = request.data.get('confirm_new_password')
 
-        if not all([email, new_password, confirm_new_password]):
+        if not all([uid, token, new_password, confirm_new_password]):
             return Response(
-                {'detail': 'All fields are required: email, new_password, confirm_new_password.'},
+                {'detail': 'All fields are required: uid, token, new_password, confirm_new_password.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if new_password != confirm_new_password:
@@ -238,23 +213,26 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        otp_obj = OTP.objects.filter(email=email, is_verified=True).first()
-        if not otp_obj or otp_obj.is_expired():
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {'detail': 'OTP not verified or expired. Please request a new OTP.'},
+                {'detail': 'Invalid reset link.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            user = User.objects.get(email=email)
-            user.set_password(new_password)
-            user.save()
+        if not default_token_generator.check_token(user, token):
             return Response(
-                {'detail': 'Password reset successfully.'},
-                status=status.HTTP_200_OK,
+                {'detail': 'Invalid or expired reset link.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        except User.DoesNotExist:
-            return Response(
-                {'detail': 'User not found.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+
+        user.set_password(new_password)
+        user.save()
+        send_password_changed_email_task.delay(user.email, user.name)
+
+        return Response(
+            {'detail': 'Password reset successfully.'},
+            status=status.HTTP_200_OK,
+        )

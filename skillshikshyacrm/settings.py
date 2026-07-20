@@ -163,6 +163,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'account.User'
 
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
+
 
 # Django REST Framework
 # https://www.django-rest-framework.org/
@@ -175,8 +179,8 @@ REST_FRAMEWORK = {
         'apps.account.authentication.CookieJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'apps.global_config.pagination.StandardResultsSetPagination',
-    'PAGE_SIZE': 20,
+    'DEFAULT_PAGINATION_CLASS': 'apps.global_config.pagination.CustomPagination',
+    'PAGE_SIZE': 10,
 }
 
 

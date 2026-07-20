@@ -5,11 +5,11 @@ from django.template.loader import render_to_string
 
 
 @shared_task
-def send_otp_email_task(email, otp):
-    html_message = render_to_string('account/emails/otp_email.html', {'otp': otp})
+def send_reset_link_email_task(email, reset_link):
+    html_message = render_to_string('account/emails/reset_link_email.html', {'reset_link': reset_link})
     send_mail(
-        'Password Reset OTP - Skill Shikshya CRM',
-        f'Your OTP is: {otp}. It expires in 15 minutes.',
+        'Password Reset - Skill Shikshya CRM',
+        f'Click the link to reset your password: {reset_link}',
         settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=html_message,

@@ -7,7 +7,6 @@ from apps.account.auth_views import (
     CookieTokenBlacklistView,
     ChangePasswordView,
     ForgotPasswordView,
-    VerifyOTPView,
     ResetPasswordView,
 )
 
@@ -19,7 +18,6 @@ urlpatterns = [
     path('api/auth/logout/', CookieTokenBlacklistView.as_view(), name='auth_logout'),
     path('api/auth/change-password/', ChangePasswordView.as_view(), name='auth_change_password'),
     path('api/auth/forgot-password/', ForgotPasswordView.as_view(), name='auth_forgot_password'),
-    path('api/auth/verify-otp/', VerifyOTPView.as_view(), name='auth_verify_otp'),
     path('api/auth/reset-password/', ResetPasswordView.as_view(), name='auth_reset_password'),
     path('api/', include('apps.account.urls')),
 ]

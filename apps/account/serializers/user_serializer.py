@@ -4,11 +4,15 @@ from apps.account.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    user_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = '__all__'
         read_only_fields = ['is_staff', 'is_superuser', 'user_permissions', 'last_login']
+
+    def get_user_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
 
     def create(self, validated_data):
         groups = validated_data.pop('groups', [])
@@ -34,6 +38,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserMiniSerializer(serializers.ModelSerializer):
+    user_permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ['id', 'name', 'email', 'is_staff', 'is_superuser', 'groups', 'user_permissions']
+
+    def get_user_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
