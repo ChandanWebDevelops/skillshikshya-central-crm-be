@@ -251,9 +251,36 @@ A confirmation email is sent asynchronously via Celery after the password is res
 
 **Rules:**
 - **Staff users** (`is_staff=True`) → see & manage all users
-- **Regular users** → only see/update their own profile
+- **Regular users** with `view_user` perm → see & retrieve all users
+- **Regular users** without perms → only see/update their own profile
 - `is_staff` & `is_superuser` are **read-only** in the API (set via Django admin or `createsuperuser`)
-- Results are paginated (default 20 per page, use `?page=2&page_size=50`)
+- Results are paginated (default 10 per page, use `?page=2&page_size=50`)
+
+**Query params:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Search across `name`, `email`, `designation`, `phone` |
+| `name` | string | Filter by name (icontains) |
+| `email` | string | Filter by email (icontains) |
+| `designation` | string | Filter by designation (icontains) |
+| `phone` | string | Filter by phone (icontains) |
+| `is_active` | bool | Filter by active status |
+| `is_staff` | bool | Filter by staff status |
+| `group` | int | Filter by group ID |
+| `ordering` | string | Order by `id`, `name`, `email`, `is_active`, `is_staff` (prefix `-` for desc) |
+| `page` | int | Page number |
+| `page_size` | int | Items per page (max 100) |
+
+### GET `/api/users/export_csv/` — Export Users to CSV
+
+Exports the current filtered user list as a CSV file. Supports all the same query params above.
+
+```
+GET /api/users/export_csv/?is_staff=true&ordering=name
+```
+
+Response: `Content-Type: text/csv` with `Content-Disposition: attachment; filename="users.csv"`.
 
 ### GET `/api/users/` — List Users
 
