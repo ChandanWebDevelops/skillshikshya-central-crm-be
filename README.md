@@ -1,0 +1,222 @@
+# Skill Shikshya CRM — Backend
+
+Django REST Framework backend for Skill Shikshya CRM.
+
+---
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/)
+- Python 3.11+ (for local development)
+
+---
+
+## Quick Start (Docker)
+
+```bash
+# 1. Clone and enter the project
+git clone <repo-url> crm-skillshikshya-backend
+cd crm-skillshikshya-backend
+
+# 2. Set up environment variables
+cp .env.example .env
+# Edit .env if needed (defaults work for local dev)
+
+# 3. Build and start all services
+docker compose up --build -d
+
+# 4. Run database migrations
+docker exec skillshikshyacrm_web python manage.py migrate
+
+# 5. Create a superuser
+docker exec -it skillshikshyacrm_web python manage.py createsuperuser
+```
+
+The API is now available at `http://localhost:8188`.
+
+---
+
+## Local Development (without Docker)
+
+```bash
+# 1. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Set up environment
+cp .env.example .env
+# Edit .env:
+#   DB_HOST=localhost  (instead of 'db')
+#   CELERY_BROKER_URL=redis://localhost:6379/0
+
+# 4. Make sure PostgreSQL and Redis are running locally
+
+# 5. Run migrations
+python manage.py migrate
+
+# 6. Create superuser
+python manage.py createsuperuser
+
+# 7. Start dev server
+python manage.py runserver 8188
+```
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEBUG` | `True` | Enable debug mode |
+| `SECRET_KEY` | *(change me)* | Django secret key |
+| `DB_ENGINE` | `django.db.backends.postgresql` | Database engine |
+| `DB_NAME` | `skillshikshyacrm_db` | Database name |
+| `DB_USER` | `skillshikshyacrm_user` | Database user |
+| `DB_PASSWORD` | *(set a secure password)* | Database password |
+| `DB_HOST` | `db` | Database host (`db` for Docker, `localhost` for local) |
+| `DB_PORT` | `5432` | Database port |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated allowed hosts |
+| `FRONTEND_URL` | `http://localhost:5173` | Frontend URL (used in password reset emails) |
+| `EMAIL_HOST` | `smtp.gmail.com` | SMTP server |
+| `EMAIL_PORT` | `587` | SMTP port |
+| `EMAIL_USE_TLS` | `True` | Use TLS for SMTP |
+| `EMAIL_HOST_USER` | *(empty)* | SMTP username |
+| `EMAIL_HOST_PASSWORD` | *(empty)* | SMTP password |
+| `DEFAULT_FROM_EMAIL` | `Skill Shikshya <noreply@skillshikshya.com>` | From address for emails |
+
+---
+
+## Useful Commands
+
+### Docker
+
+```bash
+# Build and start
+docker compose up --build -d
+
+# Stop
+docker compose down
+
+# View logs
+docker compose logs -f web
+docker compose logs -f celery_worker
+
+# Run management commands
+docker exec skillshikshyacrm_web python manage.py <command>
+
+# Open shell
+docker exec -it skillshikshyacrm_web python manage.py shell
+
+# Create migration
+docker exec skillshikshyacrm_web python manage.py makemigrations
+docker exec skillshikshyacrm_web python manage.py migrate
+
+# Create superuser
+docker exec -it skillshikshyacrm_web python manage.py createsuperuser
+```
+
+### Celery
+
+```bash
+# Check Celery worker status
+docker exec skillshikshyacrm_celery celery -A skillshikshyacrm status
+```
+
+---
+
+## Project Structure
+
+```
+crm-skillshikshya-backend/
+├── apps/
+│   ├── account/           # User auth, groups, permissions
+│   ├── course/            # Course management
+│   ├── global_config/     # Shared pagination, permissions
+│   └── app_documents/     # API documentation
+├── skillshikshyacrm/      # Django project settings
+├── backup/                # Backup of deprecated features
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── manage.py
+└── .env.example
+```
+
+---
+
+## API Overview
+
+Base URL: `http://localhost:8188`
+
+### Authentication
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/login/` | POST | Login (sets JWT cookies) |
+| `/api/auth/register/` | POST | Register (admin only) |
+| `/api/auth/refresh/` | POST | Refresh token |
+| `/api/auth/logout/` | POST | Logout |
+| `/api/auth/change-password/` | POST | Change password |
+| `/api/auth/forgot-password/` | POST | Request password reset link |
+| `/api/auth/reset-password/` | POST | Reset password (uid + token) |
+
+### Users
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/users/` | GET | List users (paginated, searchable) |
+| `/api/users/export_csv/` | GET | Export users to CSV |
+| `/api/users/{id}/` | GET/PATCH/DELETE | Retrieve/Update/Delete |
+
+### Courses
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/courses/` | GET/POST | List/Create courses |
+| `/api/courses/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
+
+### Groups & Permissions
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/groups/` | GET/POST | List/Create groups |
+| `/api/groups/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
+| `/api/permissions/` | GET | List permissions |
+
+See `apps/app_documents/` for detailed API documentation.
+
+---
+
+## Authentication Flow
+
+1. **Login** — `POST /api/auth/login/` with `email` + `password`
+2. **Cookies are set automatically** — `access_token` and `refresh_token` (HttpOnly)
+3. **Authenticated requests** — cookies are sent automatically by the browser/Postman
+4. **Token refresh** — `POST /api/auth/refresh/` (reads `refresh_token` cookie automatically)
+5. **Logout** — `POST /api/auth/logout/` (blacklists refresh token + clears cookies)
+
+---
+
+## Password Reset Flow
+
+1. **Request** — `POST /api/auth/forgot-password/` with `{"email": "..."}`
+2. **Email sent** — Contains a signed one-time reset link (expires in 15 minutes)
+3. **Reset** — `POST /api/auth/reset-password/` with `{"uid": "...", "token": "...", "new_password": "...", "confirm_new_password": "..."}`
+4. **Confirmation email** — Sent asynchronously via Celery
+
+> In DEBUG mode, the reset link is also returned in the API response for testing.
+
+---
+
+## Permissions
+
+| User type | Access |
+|-----------|--------|
+| **Staff** (`is_staff=True`) | Full access to all resources |
+| **Regular user with explicit permissions** | Limited to assigned Django permissions (e.g., `course.add_course`, `account.view_user`) |
+| **Regular user without permissions** | Read-only access to resources |
+
+Permissions are managed via Django Groups (`/api/groups/`). Assign users to groups, and groups to permissions.
