@@ -1,7 +1,8 @@
 import django_filters
 from apps.lead.models import (
     LeadSource, Campaign, LeadStatus, LeadPriority,
-    LeadTag, Lead, LeadCall, LeadActivity, FollowUp, LeadDocument,
+    LeadTag, Lead, LeadCourseInterest, Enrollment, Payment,
+    LeadCall, LeadActivity, FollowUp, LeadDocument,
 )
 
 
@@ -71,7 +72,39 @@ class LeadFilter(django_filters.FilterSet):
             'assigned_counselor': ['exact'],
             'primary_course': ['exact'],
             'is_converted': ['exact'],
+            'is_archived': ['exact'],
             'tags': ['exact'],
+        }
+
+
+class LeadCourseInterestFilter(django_filters.FilterSet):
+    class Meta:
+        model = LeadCourseInterest
+        fields = ['course', 'is_primary', 'interest_level']
+
+
+class EnrollmentFilter(django_filters.FilterSet):
+    enrollment_date__gte = django_filters.DateFilter(field_name='enrollment_date', lookup_expr='gte')
+    enrollment_date__lte = django_filters.DateFilter(field_name='enrollment_date', lookup_expr='lte')
+
+    class Meta:
+        model = Enrollment
+        fields = {
+            'course': ['exact'],
+            'status': ['exact', 'in'],
+            'batch': ['exact'],
+        }
+
+
+class PaymentFilter(django_filters.FilterSet):
+    payment_date__gte = django_filters.DateTimeFilter(field_name='payment_date', lookup_expr='gte')
+    payment_date__lte = django_filters.DateTimeFilter(field_name='payment_date', lookup_expr='lte')
+
+    class Meta:
+        model = Payment
+        fields = {
+            'payment_method': ['exact'],
+            'status': ['exact', 'in'],
         }
 
 

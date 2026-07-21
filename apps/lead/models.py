@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.db import models
+from django.db.models import Sum
 
 
 class LeadSource(models.Model):
@@ -91,6 +94,8 @@ class Lead(models.Model):
     lead_type = models.CharField(
         max_length=20, choices=LeadType.choices, default=LeadType.COURSE_INQUIRY,
     )
+    reference_number = models.CharField(max_length=20, unique=True, editable=False)
+    custom_data = models.JSONField(default=dict)
     source = models.ForeignKey(
         LeadSource, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='leads',
@@ -128,6 +133,13 @@ class Lead(models.Model):
     notes = models.TextField(null=True, blank=True)
     tags = models.ManyToManyField(LeadTag, blank=True, related_name='leads')
     is_converted = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='leads_deleted',
+    )
     converted_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -145,7 +157,142 @@ class Lead(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.full_name} ({self.phone})'
+        return f'{self.reference_number} - {self.full_name} ({self.phone})'
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            year = datetime.now().year
+            prefix = f'LD-{year}'
+            last = Lead.objects.filter(reference_number__startswith=prefix).order_by('reference_number').last()
+            seq = 1
+            if last:
+                seq = int(last.reference_number.split('-')[-1]) + 1
+            self.reference_number = f'{prefix}-{seq:06d}'
+        super().save(*args, **kwargs)
+
+
+class LeadCourseInterest(models.Model):
+    class InterestLevel(models.TextChoices):
+        HIGH = 'high', 'High'
+        MEDIUM = 'medium', 'Medium'
+        LOW = 'low', 'Low'
+
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='course_interests')
+    course = models.ForeignKey('course.Course', on_delete=models.CASCADE, related_name='lead_interests')
+    is_primary = models.BooleanField(default=False)
+    interest_level = models.CharField(
+        max_length=10, choices=InterestLevel.choices, default=InterestLevel.MEDIUM,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'lead_course_interests'
+        ordering = ['-is_primary', '-created_at']
+        unique_together = ['lead', 'course']
+
+    def __str__(self):
+        return f'{self.lead.full_name} → {self.course.name}'
+
+
+class Enrollment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        CONFIRMED = 'confirmed', 'Confirmed'
+        ACTIVE = 'active', 'Active'
+        COMPLETED = 'completed', 'Completed'
+        CANCELLED = 'cancelled', 'Cancelled'
+        DROPPED_OUT = 'dropped_out', 'Dropped Out'
+        TRANSFERRED = 'transferred', 'Transferred'
+
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='enrollments')
+    student = models.ForeignKey(
+        'student.Student', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='enrollments',
+    )
+    course = models.ForeignKey('course.Course', on_delete=models.CASCADE, related_name='enrollments')
+    batch = models.CharField(max_length=255, null=True, blank=True)
+    enrollment_date = models.DateField()
+    status = models.CharField(
+        max_length=15, choices=Status.choices, default=Status.PENDING,
+    )
+    listed_fee = models.DecimalField(max_digits=12, decimal_places=2)
+    standard_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    additional_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    agreed_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    remarks = models.TextField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='enrollments_created',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='enrollments_updated',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'enrollments'
+        ordering = ['-enrollment_date']
+
+    def __str__(self):
+        return f'{self.lead.reference_number} → {self.course.name} ({self.status})'
+
+    @property
+    def total_paid(self):
+        result = self.payments.filter(status='successful').aggregate(Sum('amount'))
+        return result['amount__sum'] or 0
+
+    @property
+    def remaining_amount(self):
+        return self.agreed_amount - self.total_paid
+
+    @property
+    def is_full_paid(self):
+        return self.remaining_amount <= 0
+
+
+class Payment(models.Model):
+    class Method(models.TextChoices):
+        CASH = 'cash', 'Cash'
+        ESEWA = 'esewa', 'eSewa'
+        KHALTI = 'khalti', 'Khalti'
+        BANK_TRANSFER = 'bank_transfer', 'Bank Transfer'
+        CARD = 'card', 'Card'
+        CONNECT_IPS = 'connectips', 'ConnectIPS'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SUCCESSFUL = 'successful', 'Successful'
+        FAILED = 'failed', 'Failed'
+        REFUNDED = 'refunded', 'Refunded'
+        VOIDED = 'voided', 'Voided'
+
+    enrollment = models.ForeignKey(
+        Enrollment, on_delete=models.CASCADE, related_name='payments',
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_date = models.DateTimeField()
+    payment_method = models.CharField(
+        max_length=20, choices=Method.choices, default=Method.CASH,
+    )
+    transaction_reference = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING,
+    )
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='payments_received',
+    )
+    notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'payments'
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f'{self.amount} ({self.get_status_display()}) — {self.enrollment}'
 
 
 class LeadCall(models.Model):

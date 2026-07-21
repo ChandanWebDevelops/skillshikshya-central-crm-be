@@ -194,8 +194,12 @@ Base URL: `http://localhost:8188`
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/leads/` | GET/POST | List/Create leads |
-| `/api/leads/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
 | `/api/leads/export_csv/` | GET | Export to CSV |
+| `/api/leads/recycle_bin/` | GET | List soft-deleted leads |
+| `/api/leads/{id}/` | GET/PUT/PATCH/DELETE | CRUD (DELETE = soft delete) |
+| `/api/leads/{id}/archive/` | POST | Archive lead |
+| `/api/leads/{id}/restore/` | POST | Restore lead |
+| `/api/leads/{id}/purge/` | POST | Permanent delete (staff only) |
 | `/api/lead-sources/` | GET/POST | Lead sources (config) |
 | `/api/campaigns/` | GET/POST | Campaigns (config) |
 | `/api/lead-statuses/` | GET/POST | Lead statuses (config) |
@@ -205,6 +209,9 @@ Base URL: `http://localhost:8188`
 | `/api/leads/{id}/activities/` | GET/POST | Lead activities |
 | `/api/leads/{id}/followups/` | GET/POST | Lead followups |
 | `/api/leads/{id}/documents/` | GET/POST | Lead documents |
+| `/api/leads/{id}/course-interests/` | GET/POST | Course interests |
+| `/api/leads/{id}/enrollments/` | GET/POST | Enrollments (with computed fees) |
+| `/api/leads/{id}/enrollments/{eid}/payments/` | GET/POST | Enrollment payments |
 
 ### Students
 
