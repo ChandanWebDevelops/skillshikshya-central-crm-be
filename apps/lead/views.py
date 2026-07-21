@@ -14,19 +14,19 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.lead.models import (
     LeadSource, Campaign, LeadStatus, LeadPriority,
-    LeadTag, Lead, LeadCourseInterest, Enrollment, Payment,
+    LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
     LeadCall, LeadActivity, FollowUp, LeadDocument,
 )
 from apps.lead.serializers import (
     LeadSourceSerializer, CampaignSerializer, LeadStatusSerializer,
-    LeadPrioritySerializer, LeadTagSerializer, LeadSerializer,
+    LeadPrioritySerializer, LeadTagSerializer, LeadTypeSerializer, LeadSerializer,
     LeadCourseInterestSerializer, EnrollmentSerializer, PaymentSerializer,
     LeadCallSerializer, LeadActivitySerializer, FollowUpSerializer,
     LeadDocumentSerializer, LeadListSerializer, LeadMinSerializer,
 )
 from apps.lead.filters import (
     LeadSourceFilter, CampaignFilter, LeadStatusFilter,
-    LeadPriorityFilter, LeadTagFilter, LeadFilter,
+    LeadPriorityFilter, LeadTagFilter, LeadTypeFilter, LeadFilter,
     LeadCourseInterestFilter, EnrollmentFilter, PaymentFilter,
     LeadCallFilter, LeadActivityFilter, FollowUpFilter, LeadDocumentFilter,
 )
@@ -86,6 +86,15 @@ class LeadTagViewSet(ConfigViewSet):
     queryset = LeadTag.objects.all()
     serializer_class = LeadTagSerializer
     filterset_class = LeadTagFilter
+    search_fields = ['name']
+    ordering_fields = ['id', 'name', 'is_active']
+    ordering = ['name']
+
+
+class LeadTypeViewSet(ConfigViewSet):
+    queryset = LeadType.objects.all()
+    serializer_class = LeadTypeSerializer
+    filterset_class = LeadTypeFilter
     search_fields = ['name']
     ordering_fields = ['id', 'name', 'is_active']
     ordering = ['name']
@@ -161,7 +170,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         for lead in queryset.iterator(chunk_size=500):
             writer.writerow([
                 lead.reference_number, lead.full_name, lead.phone, lead.email,
-                lead.lead_type,
+                lead.lead_type.name if lead.lead_type else '',
                 lead.source.name if lead.source else '',
                 lead.status.name if lead.status else '',
                 lead.priority.name if lead.priority else '',

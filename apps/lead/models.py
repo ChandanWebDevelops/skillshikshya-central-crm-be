@@ -79,20 +79,28 @@ class LeadTag(models.Model):
         return self.name
 
 
-class Lead(models.Model):
-    class LeadType(models.TextChoices):
-        COURSE_INQUIRY = 'course_inquiry', 'Course Inquiry'
-        MASTER_CLASS = 'master_class', 'Master Class'
-        CORPORATE = 'corporate', 'Corporate'
-        GENERAL_INQUIRY = 'general_inquiry', 'General Inquiry'
+class LeadType(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
+    class Meta:
+        db_table = 'lead_types'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Lead(models.Model):
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
     secondary_phone = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     address = models.TextField(null=True, blank=True)
-    lead_type = models.CharField(
-        max_length=20, choices=LeadType.choices, default=LeadType.COURSE_INQUIRY,
+    lead_type = models.ForeignKey(
+        LeadType, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='leads',
     )
     reference_number = models.CharField(max_length=20, unique=True, editable=False)
     custom_data = models.JSONField(default=dict)

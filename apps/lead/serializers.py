@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from apps.lead.models import (
     LeadSource, Campaign, LeadStatus, LeadPriority,
-    LeadTag, Lead, LeadCourseInterest, Enrollment, Payment,
+    LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
     LeadCall, LeadActivity, FollowUp, LeadDocument,
 )
 
@@ -33,6 +33,12 @@ class LeadPrioritySerializer(serializers.ModelSerializer):
 class LeadTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeadTag
+        fields = '__all__'
+
+
+class LeadTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeadType
         fields = '__all__'
 
 
@@ -80,6 +86,7 @@ class LeadMinSerializer(serializers.ModelSerializer):
 
 class LeadListSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source='status.name', read_only=True)
+    lead_type_name = serializers.CharField(source='lead_type.name', read_only=True)
     priority_name = serializers.CharField(source='priority.name', read_only=True)
     priority_color = serializers.CharField(source='priority.color', read_only=True)
     status_color = serializers.CharField(source='status.color', read_only=True)
@@ -98,6 +105,7 @@ class LeadListSerializer(serializers.ModelSerializer):
 
 class LeadSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source='status.name', read_only=True)
+    lead_type_name = serializers.CharField(source='lead_type.name', read_only=True)
     priority_name = serializers.CharField(source='priority.name', read_only=True)
     priority_color = serializers.CharField(source='priority.color', read_only=True)
     status_color = serializers.CharField(source='status.color', read_only=True)

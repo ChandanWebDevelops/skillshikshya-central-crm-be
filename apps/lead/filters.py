@@ -1,7 +1,7 @@
 import django_filters
 from apps.lead.models import (
     LeadSource, Campaign, LeadStatus, LeadPriority,
-    LeadTag, Lead, LeadCourseInterest, Enrollment, Payment,
+    LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
     LeadCall, LeadActivity, FollowUp, LeadDocument,
 )
 
@@ -46,6 +46,14 @@ class LeadTagFilter(django_filters.FilterSet):
         fields = ['name', 'is_active']
 
 
+class LeadTypeFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = LeadType
+        fields = ['name', 'is_active']
+
+
 class LeadFilter(django_filters.FilterSet):
     full_name = django_filters.CharFilter(lookup_expr='icontains')
     phone = django_filters.CharFilter(lookup_expr='icontains')
@@ -63,7 +71,7 @@ class LeadFilter(django_filters.FilterSet):
     class Meta:
         model = Lead
         fields = {
-            'lead_type': ['exact'],
+            'lead_type': ['exact', 'in'],
             'source': ['exact', 'in'],
             'campaign': ['exact', 'in'],
             'branch': ['exact', 'in'],

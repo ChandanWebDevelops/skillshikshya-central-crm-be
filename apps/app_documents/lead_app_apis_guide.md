@@ -72,6 +72,20 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 
 **Fields:** `id`, `name`, `color` (hex), `is_active`
 
+### Lead Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/lead-types/` | List types |
+| POST | `/api/lead-types/` | Create type |
+| GET/PUT/PATCH/DELETE | `/api/lead-types/{id}/` | CRUD |
+
+**Fields:** `id`, `name`, `description`, `is_active`
+
+**Default types:** Course Inquiry (1), Master Class (2), Corporate (3), General Inquiry (4)
+
+**Query params:** `?search=course&is_active=true`
+
 ---
 
 ## Lead Endpoints
@@ -145,14 +159,7 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 }
 ```
 
-**`lead_type` options:**
-
-| Value | Label |
-|-------|-------|
-| `course_inquiry` | Course Inquiry |
-| `master_class` | Master Class |
-| `corporate` | Corporate |
-| `general_inquiry` | General Inquiry |
+**`lead_type`:** FK to `/api/lead-types/`. Send the integer ID (e.g., `1` for Course Inquiry).
 
 ---
 
@@ -179,6 +186,8 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 | `is_archived` | bool | Filter by archive status (requires `include_archived=true`) |
 | `tags` | int | Filter by tag ID |
 | `include_archived` | bool | Include archived leads in results |
+| `lead_type` | int | Filter by lead type ID |
+| `lead_type__in` | string | Filter by multiple lead types |
 | `lead_score__gte` | int | Min lead score |
 | `lead_score__lte` | int | Max lead score |
 | `expected_revenue__gte` | number | Min expected revenue |
@@ -206,7 +215,7 @@ GET /api/leads/?created_at__gte=2026-07-01T00:00:00Z
 
 ### GET `/api/leads/{id}/` — Get Lead Detail
 
-**Response includes** `enrollment_summary`, `call_count`, `next_followup`, `reference_number`:
+**Response includes** `enrollment_summary`, `call_count`, `next_followup`, `reference_number`, `lead_type_name`:
 
 ```json
 {
@@ -563,6 +572,7 @@ All nested endpoints are scoped under a specific lead. The `lead` field is auto-
 - `lead.add_leadstatus`, etc.
 - `lead.add_leadpriority`, etc.
 - `lead.add_leadtag`, etc.
+- `lead.add_leadtype`, `lead.change_leadtype`, `lead.delete_leadtype`, `lead.view_leadtype`
 - `lead.add_leadcall`, `lead.change_leadcall`, `lead.delete_leadcall`, `lead.view_leadcall`
 - `lead.add_leadactivity`, `lead.change_leadactivity`, `lead.delete_leadactivity`, `lead.view_leadactivity`
 - `lead.add_followup`, `lead.change_followup`, `lead.delete_followup`, `lead.view_followup`

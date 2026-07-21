@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from apps.lead.models import (
     LeadSource, Campaign, LeadStatus, LeadPriority,
-    LeadTag, Lead, LeadCourseInterest, Enrollment, Payment,
+    LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
     LeadCall, LeadActivity, FollowUp, LeadDocument,
 )
 
@@ -21,6 +21,7 @@ admin.site.register(Campaign)
 admin.site.register(LeadStatus)
 admin.site.register(LeadPriority)
 admin.site.register(LeadTag)
+admin.site.register(LeadType)
 admin.site.register(Lead, LeadAdmin)
 admin.site.register(LeadCourseInterest)
 admin.site.register(Enrollment)
