@@ -3,7 +3,7 @@ from apps.account.models import User
 
 
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'designation', 'is_active', 'is_staff']
+    list_display = ['name', 'email', 'branch', 'designation', 'is_active', 'is_staff']
     search_fields = ['name', 'email']
 
 

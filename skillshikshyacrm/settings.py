@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     # Project apps
     'apps.account',
+    'apps.branch',
     'apps.course',
     'apps.global_config',
 ]
@@ -168,6 +169,15 @@ AUTH_USER_MODEL = 'account.User'
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
+
+# R2 (Cloudflare) Object Storage
+
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
+R2_PUBLIC_URL = os.environ.get('PUBLIC_DEVELOPMENT_URL', '')
+R2_ENDPOINT_URL = f'https://{os.environ.get("R2_ACCOUNT_ID", "")}.r2.cloudflarestorage.com'
 
 
 # Django REST Framework
