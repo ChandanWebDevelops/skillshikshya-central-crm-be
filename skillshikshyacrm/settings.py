@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'apps.branch',
     'apps.course',
     'apps.global_config',
+    'apps.lead',
 ]
 
 MIDDLEWARE = [
