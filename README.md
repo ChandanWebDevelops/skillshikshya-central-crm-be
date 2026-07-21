@@ -134,7 +134,11 @@ crm-skillshikshya-backend/
 ├── apps/
 │   ├── account/           # User auth, groups, permissions
 │   ├── course/            # Course management
-│   ├── global_config/     # Shared pagination, permissions
+│   ├── branch/            # Branch/location management
+│   ├── course/            # Course management
+│   ├── lead/              # Lead management (source, campaign, status, calls, activities, followups)
+│   ├── student/           # Student profiles (no login)
+│   ├── global_config/     # Shared pagination, permissions, file upload
 │   └── app_documents/     # API documentation
 ├── skillshikshyacrm/      # Django project settings
 ├── backup/                # Backup of deprecated features
@@ -178,6 +182,45 @@ Base URL: `http://localhost:8188`
 | `/api/courses/` | GET/POST | List/Create courses |
 | `/api/courses/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
 
+### Branches
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/branches/` | GET/POST | List/Create branches |
+| `/api/branches/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
+
+### Leads
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/leads/` | GET/POST | List/Create leads |
+| `/api/leads/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
+| `/api/leads/export_csv/` | GET | Export to CSV |
+| `/api/lead-sources/` | GET/POST | Lead sources (config) |
+| `/api/campaigns/` | GET/POST | Campaigns (config) |
+| `/api/lead-statuses/` | GET/POST | Lead statuses (config) |
+| `/api/lead-priorities/` | GET/POST | Lead priorities (config) |
+| `/api/lead-tags/` | GET/POST | Lead tags (config) |
+| `/api/leads/{id}/calls/` | GET/POST | Lead calls |
+| `/api/leads/{id}/activities/` | GET/POST | Lead activities |
+| `/api/leads/{id}/followups/` | GET/POST | Lead followups |
+| `/api/leads/{id}/documents/` | GET/POST | Lead documents |
+
+### Students
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/students/` | GET/POST | List/Create students |
+| `/api/students/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
+| `/api/students/export_csv/` | GET | Export to CSV |
+| `/api/students/{id}/documents/` | GET/POST | Student documents |
+
+### File Upload
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/upload/` | POST | Upload file to R2 |
+
 ### Groups & Permissions
 
 | Endpoint | Method | Description |
@@ -186,7 +229,16 @@ Base URL: `http://localhost:8188`
 | `/api/groups/{id}/` | GET/PUT/PATCH/DELETE | CRUD |
 | `/api/permissions/` | GET | List permissions |
 
-See `apps/app_documents/` for detailed API documentation.
+### API Docs
+
+| File | Description |
+|------|-------------|
+| `apps/app_documents/account_app_apis_guide.md` | Auth, users, groups, permissions |
+| `apps/app_documents/course_app_apis_guide.md` | Courses |
+| `apps/app_documents/branch_app_apis_guide.md` | Branches |
+| `apps/app_documents/lead_app_apis_guide.md` | Leads (config, child records, filters, CSV) |
+| `apps/app_documents/student_app_apis_guide.md` | Students (profiles, documents, CSV) |
+| `apps/app_documents/upload_api_guide.md` | File upload to R2 |
 
 ---
 

@@ -48,6 +48,11 @@ services:
       DB_PORT: ${DB_PORT}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CELERY_BROKER_URL: redis://redis:6379/0
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      PUBLIC_DEVELOPMENT_URL: ${PUBLIC_DEVELOPMENT_URL}
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +77,11 @@ services:
       DB_PORT: ${DB_PORT}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CELERY_BROKER_URL: redis://redis:6379/0
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      PUBLIC_DEVELOPMENT_URL: ${PUBLIC_DEVELOPMENT_URL}
     depends_on:
       - db
       - redis

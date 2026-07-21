@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from apps.account.auth_views import (
     RegisterView,
     CookieTokenObtainPairView,
@@ -9,6 +9,7 @@ from apps.account.auth_views import (
     ForgotPasswordView,
     ResetPasswordView,
 )
+from apps.global_config.views import upload_file, serve_file
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,6 +24,9 @@ urlpatterns = [
     path('api/', include('apps.course.urls')),
     path('api/', include('apps.branch.urls')),
     path('api/', include('apps.lead.urls')),
+    path('api/', include('apps.student.urls')),
+    path('api/upload/', upload_file, name='upload_file'),
+    re_path(r'^api/files/(?P<key>.+)$', serve_file, name='serve_file'),
 
 
 ]

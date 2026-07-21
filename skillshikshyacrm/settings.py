@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'apps.course',
     'apps.global_config',
     'apps.lead',
+    'apps.student',
 ]
 
 MIDDLEWARE = [
