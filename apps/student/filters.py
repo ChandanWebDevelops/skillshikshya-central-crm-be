@@ -1,5 +1,5 @@
 import django_filters
-from apps.student.models import Student, StudentDocument
+from apps.student.models import Student, StudentDocument, Attendance
 
 
 class StudentFilter(django_filters.FilterSet):
@@ -28,3 +28,16 @@ class StudentDocumentFilter(django_filters.FilterSet):
     class Meta:
         model = StudentDocument
         fields = ['student', 'document_type']
+
+
+class AttendanceFilter(django_filters.FilterSet):
+    date__gte = django_filters.DateFilter(field_name='date', lookup_expr='gte')
+    date__lte = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+
+    class Meta:
+        model = Attendance
+        fields = {
+            'student': ['exact'],
+            'course': ['exact'],
+            'status': ['exact'],
+        }

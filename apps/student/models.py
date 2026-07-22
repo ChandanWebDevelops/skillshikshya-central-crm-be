@@ -1,5 +1,8 @@
+from datetime import date, timedelta
+
 from django.conf import settings
 from django.db import models
+from django.db.models import Count, Q
 
 
 class Student(models.Model):
@@ -83,6 +86,75 @@ class Student(models.Model):
             self.student_id = f'{prefix}-{seq:04d}'
         super().save(*args, **kwargs)
 
+    def get_attendance_profile(self, course=None):
+        from django.db.models import Count, Q
+
+        filters = Q(student=self)
+        if course:
+            filters &= Q(course=course)
+
+        total = Attendance.objects.filter(filters).count()
+        present = Attendance.objects.filter(filters & Q(status='present')).count()
+        absent = total - present
+        pct = round((present / total * 100), 1) if total > 0 else 0
+
+        present_dates = sorted(
+            Attendance.objects.filter(filters & Q(status='present'))
+            .values_list('date', flat=True)
+        )
+
+        current_streak = 0
+        longest_streak = 0
+
+        if present_dates:
+            today = date.today()
+            check = today
+            while check in present_dates:
+                current_streak += 1
+                check -= timedelta(days=1)
+
+            streak = 1
+            for i in range(1, len(present_dates)):
+                if (present_dates[i] - present_dates[i - 1]).days == 1:
+                    streak += 1
+                else:
+                    longest_streak = max(longest_streak, streak)
+                    streak = 1
+            longest_streak = max(longest_streak, streak)
+
+        monthly = (
+            Attendance.objects.filter(filters)
+            .values('date__year', 'date__month')
+            .annotate(
+                present_count=Count('id', filter=Q(status='present')),
+                absent_count=Count('id', filter=Q(status='absent')),
+            )
+            .order_by('-date__year', '-date__month')
+        )
+
+        monthly_breakdown = [
+            {
+                'month': f'{m["date__year"]}-{str(m["date__month"]).zfill(2)}',
+                'present': m['present_count'],
+                'absent': m['absent_count'],
+                'total': m['present_count'] + m['absent_count'],
+                'percentage': round(
+                    (m['present_count'] / (m['present_count'] + m['absent_count']) * 100), 1
+                ) if (m['present_count'] + m['absent_count']) > 0 else 0,
+            }
+            for m in monthly
+        ]
+
+        return {
+            'current_streak': current_streak,
+            'longest_streak': longest_streak,
+            'attendance_percentage': pct,
+            'total_classes': total,
+            'present_count': present,
+            'absent_count': absent,
+            'monthly_breakdown': monthly_breakdown,
+        }
+
 
 class StudentDocument(models.Model):
     student = models.ForeignKey(
@@ -106,3 +178,33 @@ class StudentDocument(models.Model):
 
     def __str__(self):
         return f'{self.document_type} - {self.student.full_name}'
+
+
+class Attendance(models.Model):
+    class Status(models.TextChoices):
+        PRESENT = 'present', 'Present'
+        ABSENT = 'absent', 'Absent'
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name='attendance_records',
+    )
+    course = models.ForeignKey(
+        'course.Course', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='attendance_records',
+    )
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=Status.choices)
+    remarks = models.TextField(null=True, blank=True)
+    marked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='attendance_marked',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'student_attendance'
+        ordering = ['-date']
+        unique_together = ['student', 'date', 'course']
+
+    def __str__(self):
+        return f'{self.student.full_name} - {self.date} ({self.get_status_display()})'

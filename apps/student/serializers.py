@@ -1,6 +1,5 @@
-from django.db.models import Sum
 from rest_framework import serializers
-from apps.student.models import Student, StudentDocument
+from apps.student.models import Student, StudentDocument, Attendance
 from apps.lead.models import Payment
 
 
@@ -75,3 +74,14 @@ class StudentDocumentSerializer(serializers.ModelSerializer):
         model = StudentDocument
         fields = '__all__'
         read_only_fields = ['student', 'uploaded_by', 'uploaded_at']
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    course_name = serializers.CharField(source='course.name', read_only=True)
+    marked_by_name = serializers.CharField(source='marked_by.name', read_only=True)
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+
+    class Meta:
+        model = Attendance
+        fields = '__all__'
+        read_only_fields = ['student', 'marked_by', 'created_at']

@@ -222,6 +222,59 @@ GET /api/students/export_csv/?status=active&ordering=-created_at
 
 ---
 
+## Attendance
+
+### Student Attendance Profile
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/students/{id}/attendance_profile/` | Get attendance stats + streaks |
+
+Returns attendance statistics for a student:
+
+```json
+{
+    "current_streak": 3,
+    "longest_streak": 12,
+    "attendance_percentage": 75.0,
+    "total_classes": 20,
+    "present_count": 15,
+    "absent_count": 5,
+    "monthly_breakdown": [
+        {"month": "2026-07", "present": 15, "absent": 5, "total": 20, "percentage": 75.0}
+    ],
+    "recent_records": [...]
+}
+```
+
+**Query params:** `?course=1` — filter by course
+
+### Attendance Records
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/attendance/` | List all attendance (paginated) |
+| GET | `/api/students/{id}/attendance/` | List attendance for a student (paginated) |
+| POST | `/api/students/{id}/attendance/` | Mark attendance for a student |
+| GET | `/api/students/{id}/attendance/{pk}/` | Get attendance record |
+| PATCH/DELETE | `/api/students/{id}/attendance/{pk}/` | Update/delete record |
+
+**Fields:** `student`, `student_name` (read), `course` (FK, optional), `course_name` (read), `date`, `status` (`present`/`absent`), `remarks`, `marked_by_name` (read)
+
+**POST `/api/students/{id}/attendance/`**
+```json
+{
+    "date": "2026-07-22",
+    "status": "present",
+    "course": 1,
+    "remarks": "On time"
+}
+```
+
+**Query params:** `?status=present&course=1&date__gte=2026-07-01&date__lte=2026-07-31`
+
+---
+
 ## Nested Endpoints
 
 ### Student Documents
@@ -250,4 +303,4 @@ GET /api/students/export_csv/?status=active&ordering=-created_at
 | **Regular user** with permissions | Limited by assigned Django permissions |
 | **Regular user** no permissions | Read-only — can list and view students |
 
-**Django permissions:** `student.add_student`, `student.change_student`, `student.delete_student`, `student.view_student`
+**Django permissions:** `student.add_student`, `student.change_student`, `student.delete_student`, `student.view_student`, `student.add_attendance`, `student.change_attendance`, `student.delete_attendance`, `student.view_attendance`

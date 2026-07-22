@@ -6,15 +6,16 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from django_filters.rest_framework import DjangoFilterBackend
 
-from apps.student.models import Student, StudentDocument
+from apps.student.models import Student, StudentDocument, Attendance
 from apps.student.serializers import (
     StudentSerializer, StudentListSerializer,
-    StudentDocumentSerializer,
+    StudentDocumentSerializer, AttendanceSerializer,
 )
-from apps.student.filters import StudentFilter, StudentDocumentFilter
+from apps.student.filters import StudentFilter, StudentDocumentFilter, AttendanceFilter
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
 from apps.global_config.filters import BranchFilterBackend
@@ -41,6 +42,20 @@ class StudentViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return StudentListSerializer
         return StudentSerializer
+
+    @action(detail=True, methods=['get'])
+    def attendance_profile(self, request, pk=None):
+        student = self.get_object()
+        course_id = request.query_params.get('course')
+        profile = student.get_attendance_profile(course=course_id)
+
+        recent = Attendance.objects.filter(student=student)
+        if course_id:
+            recent = recent.filter(course_id=course_id)
+        recent = recent.select_related('course', 'marked_by').order_by('-date')[:20]
+
+        profile['recent_records'] = AttendanceSerializer(recent, many=True).data
+        return Response(profile)
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -98,6 +113,35 @@ class StudentDocumentViewSet(viewsets.ModelViewSet):
             student_id=self.kwargs['student_pk'],
             uploaded_by=self.request.user,
         )
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [p() for p in permission_classes]
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    queryset = Attendance.objects.all()
+    serializer_class = AttendanceSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
+    filterset_class = AttendanceFilter
+    ordering_fields = ['date', 'created_at']
+    ordering = ['-date']
+
+    def get_queryset(self):
+        qs = Attendance.objects.select_related('course', 'marked_by')
+        if 'student_pk' in self.kwargs:
+            qs = qs.filter(student_id=self.kwargs['student_pk'])
+        return qs
+
+    def perform_create(self, serializer):
+        kwargs = {'marked_by': self.request.user}
+        if 'student_pk' in self.kwargs:
+            kwargs['student_id'] = self.kwargs['student_pk']
+        serializer.save(**kwargs)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
