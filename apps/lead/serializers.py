@@ -157,6 +157,7 @@ class LeadSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'reference_number', 'created_at', 'updated_at', 'created_by', 'updated_by',
             'is_converted', 'converted_at', 'is_deleted', 'deleted_at', 'deleted_by',
+            'lead_score',
         ]
 
     def get_call_count(self, obj):

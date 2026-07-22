@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Count, Max
 
 
 class LearningMode(models.Model):
@@ -282,6 +282,40 @@ class Lead(models.Model):
         super().__init__(*args, **kwargs)
         self._original_assigned_counselor_id = self.assigned_counselor_id
 
+    def compute_lead_score(self):
+        if self.is_converted:
+            return 100
+        if self.status and self.status.is_final:
+            return 0
+        score = 0
+        if self.status:
+            max_order = LeadStatus.objects.filter(is_final=False).aggregate(
+                models.Max('sort_order')
+            )['sort_order__max'] or 1
+            score += min(35, int((self.status.sort_order / max_order) * 35))
+        if self.priority:
+            priority_map = {1: 25, 2: 17, 3: 9, 4: 3}
+            score += priority_map.get(self.priority.sort_order, 0)
+        if self.last_contact_at:
+            days_since = (datetime.now(self.last_contact_at.tzinfo) - self.last_contact_at).days
+            if days_since <= 3:
+                score += 20
+            elif days_since <= 7:
+                score += 15
+            elif days_since <= 14:
+                score += 10
+            elif days_since <= 30:
+                score += 5
+        call_count = self.calls.count()
+        activity_count = self.activities.count()
+        score += min(15, call_count * 3 + activity_count * 1)
+        pending_future = self.followups.filter(
+            status='pending', scheduled_at__gt=datetime.now(),
+        ).exists()
+        if pending_future:
+            score += 5
+        return max(0, min(100, round(score)))
+
     def save(self, *args, **kwargs):
         if not self.reference_number:
             year = datetime.now().year
@@ -291,6 +325,7 @@ class Lead(models.Model):
             if last:
                 seq = int(last.reference_number.split('-')[-1]) + 1
             self.reference_number = f'{prefix}-{seq:06d}'
+        self.lead_score = self.compute_lead_score()
         super().save(*args, **kwargs)
 
 

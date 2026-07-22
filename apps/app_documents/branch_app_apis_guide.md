@@ -8,6 +8,8 @@ The Branch app manages physical/branch office locations.
 
 ---
 
+**Branch scoping:** Branches themselves are not branch-scoped (they are the source of the scoping). See [Lead App Overview](lead_app_overview.md#branch-scoping) for how branches are used for scoping other resources.
+
 ## Branch Endpoints
 
 | Method | Endpoint | Description | Access |

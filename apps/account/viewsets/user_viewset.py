@@ -14,6 +14,7 @@ from apps.account.filters import UserFilter
 from apps.account.serializers.user_serializer import UserSerializer
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
+from apps.global_config.filters import BranchFilterBackend
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -22,7 +23,8 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
     http_method_names = ['get', 'put', 'patch', 'delete', 'head', 'options']
     filterset_class = UserFilter
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
+    branch_field = 'branch'
     search_fields = ['name', 'email', 'designation', 'phone']
     ordering_fields = ['id', 'name', 'email', 'is_active', 'is_staff']
     ordering = ['id']

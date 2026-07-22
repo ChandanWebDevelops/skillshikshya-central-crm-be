@@ -8,7 +8,7 @@ The Student app manages student profiles. Students do **not** have login account
 
 ---
 
-**Branch scoping:** See [Lead App API Guide](lead_app_apis_guide.md#branch-scoping) for details. All student endpoints support `?branch_id=X`.
+**Branch scoping:** See [Lead App Overview](lead_app_overview.md#branch-scoping) for details. All student endpoints support `?branch_id=X`.
 
 ---
 

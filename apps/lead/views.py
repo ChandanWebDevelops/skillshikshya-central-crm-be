@@ -397,10 +397,14 @@ class LeadCallViewSet(viewsets.ModelViewSet):
         return LeadCall.objects.filter(lead_id=self.kwargs['lead_pk']).select_related('created_by')
 
     def perform_create(self, serializer):
-        serializer.save(
+        instance = serializer.save(
             lead_id=self.kwargs['lead_pk'],
             created_by=self.request.user,
         )
+        lead = instance.lead
+        if lead.last_contact_at is None or instance.call_timestamp > lead.last_contact_at:
+            lead.last_contact_at = instance.call_timestamp
+        lead.save(update_fields=['lead_score', 'last_contact_at'])
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -422,10 +426,14 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
         return LeadActivity.objects.filter(lead_id=self.kwargs['lead_pk']).select_related('performed_by')
 
     def perform_create(self, serializer):
-        serializer.save(
+        instance = serializer.save(
             lead_id=self.kwargs['lead_pk'],
             performed_by=self.request.user,
         )
+        lead = instance.lead
+        if lead.last_contact_at is None or instance.activity_at > lead.last_contact_at:
+            lead.last_contact_at = instance.activity_at
+        lead.save(update_fields=['lead_score', 'last_contact_at'])
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -449,13 +457,22 @@ class FollowUpViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(
+        instance = serializer.save(
             lead_id=self.kwargs['lead_pk'],
             created_by=self.request.user,
         )
+        lead = instance.lead
+        if instance.status == 'pending':
+            if lead.next_followup_at is None or instance.scheduled_at < lead.next_followup_at:
+                lead.next_followup_at = instance.scheduled_at
+            else:
+                lead.save(update_fields=['lead_score'])
+                return
+            lead.save(update_fields=['lead_score', 'next_followup_at'])
 
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.request.user)
+        instance = serializer.save(updated_by=self.request.user)
+        instance.lead.save(update_fields=['lead_score'])
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

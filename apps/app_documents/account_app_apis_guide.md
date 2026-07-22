@@ -62,6 +62,8 @@ Only `name`, `email`, and `password` are required — all other fields are optio
         "monthly_enrollment_target": "500000.00",
         "designation": "Sales Executive",
         "phone": "9841234567",
+        "branch": 1,
+        "branch_name": "Kathmandu",
         "shift_start": "09:00:00",
         "shift_end": "18:00:00",
         "custom_weekly_offs": false,
@@ -256,6 +258,8 @@ A confirmation email is sent asynchronously via Celery after the password is res
 - `is_staff` & `is_superuser` are **read-only** in the API (set via Django admin or `createsuperuser`)
 - Results are paginated (default 10 per page, use `?page=2&page_size=50`)
 
+**Branch scoping:** See [Lead App Overview](lead_app_overview.md#branch-scoping) for details. All user endpoints support `?branch_id=X`. Non-staff users are auto-scoped to their branch.
+
 **Query params:**
 
 | Parameter | Type | Description |
@@ -268,6 +272,9 @@ A confirmation email is sent asynchronously via Celery after the password is res
 | `is_active` | bool | Filter by active status |
 | `is_staff` | bool | Filter by staff status |
 | `group` | int | Filter by group ID |
+| `branch` | int | Filter by branch ID |
+| `branch_id` | int | Filter by branch ID (alias) |
+| `branch__in` | string | Filter by multiple branches (comma-separated IDs) |
 | `ordering` | string | Order by `id`, `name`, `email`, `is_active`, `is_staff` (prefix `-` for desc) |
 | `page` | int | Page number |
 | `page_size` | int | Items per page (max 100) |
@@ -295,10 +302,12 @@ Response: `Content-Type: text/csv` with `Content-Disposition: attachment; filena
             "id": 1,
             "name": "Ram Sharma",
             "email": "ram@skillskhikshya.com",
-        "daily_call_target_min": 50,
-        "monthly_enrollment_target": "500000.00",
-        "designation": "Sales Executive",
+            "daily_call_target_min": 50,
+            "monthly_enrollment_target": "500000.00",
+            "designation": "Sales Executive",
             "phone": "9841234567",
+            "branch": 1,
+            "branch_name": "Kathmandu",
             "shift_start": "09:00:00",
             "shift_end": "18:00:00",
             "custom_weekly_offs": false,

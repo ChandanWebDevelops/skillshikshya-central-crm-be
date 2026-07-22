@@ -11,6 +11,8 @@ class UserFilter(django_filters.FilterSet):
     group = django_filters.ModelChoiceFilter(
         field_name='groups', queryset=Group.objects.all(),
     )
+    branch_id = django_filters.NumberFilter(field_name='branch')
+    branch__in = django_filters.BaseInFilter(field_name='branch', lookup_expr='in')
     is_active = django_filters.BooleanFilter()
     is_staff = django_filters.BooleanFilter()
 
@@ -18,5 +20,5 @@ class UserFilter(django_filters.FilterSet):
         model = User
         fields = [
             'name', 'email', 'designation', 'phone',
-            'group', 'is_active', 'is_staff',
+            'group', 'branch', 'is_active', 'is_staff',
         ]

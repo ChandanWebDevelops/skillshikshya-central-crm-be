@@ -5,6 +5,7 @@ from apps.account.models import User
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     user_permissions = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
 
     class Meta:
         model = User
@@ -39,10 +40,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserMiniSerializer(serializers.ModelSerializer):
     user_permissions = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'name', 'email', 'is_staff', 'is_superuser', 'branch', 'groups', 'user_permissions']
+        fields = ['id', 'name', 'email', 'is_staff', 'is_superuser', 'branch', 'branch_name', 'groups', 'user_permissions']
 
     def get_user_permissions(self, obj):
         return sorted(obj.get_all_permissions())

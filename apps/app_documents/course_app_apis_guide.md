@@ -8,6 +8,8 @@ The Course app manages course offerings including courses, master classes, and j
 
 ---
 
+**Branch scoping:** See [Lead App Overview](lead_app_overview.md#branch-scoping) for details. All course endpoints support `?branch_id=X`.
+
 ## Course Endpoints
 
 | Method | Endpoint | Description | Access |
