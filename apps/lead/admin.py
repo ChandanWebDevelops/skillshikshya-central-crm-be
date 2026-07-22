@@ -1,9 +1,9 @@
 from django.contrib import admin
 
 from apps.lead.models import (
-    LeadSource, Campaign, LeadStatus, LeadPriority,
+    LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
     LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
-    LeadCall, LeadActivity, FollowUp, LeadDocument,
+    LeadCall, LeadActivity, FollowUp, LeadDocument, Notification,
 )
 
 
@@ -16,6 +16,10 @@ class LeadAdmin(admin.ModelAdmin):
     search_fields = ['full_name', 'reference_number', 'phone', 'email']
 
 
+admin.site.register(LearningMode)
+admin.site.register(Institution)
+admin.site.register(Province)
+admin.site.register(City)
 admin.site.register(LeadSource)
 admin.site.register(Campaign)
 admin.site.register(LeadStatus)
@@ -30,3 +34,4 @@ admin.site.register(LeadCall)
 admin.site.register(LeadActivity)
 admin.site.register(FollowUp)
 admin.site.register(LeadDocument)
+admin.site.register(Notification)

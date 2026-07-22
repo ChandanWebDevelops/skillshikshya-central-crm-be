@@ -13,30 +13,37 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.lead.models import (
-    LeadSource, Campaign, LeadStatus, LeadPriority,
+    LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
     LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
-    LeadCall, LeadActivity, FollowUp, LeadDocument,
+    LeadCall, LeadActivity, FollowUp, LeadDocument, Notification,
 )
 from apps.lead.serializers import (
+    LearningModeSerializer, InstitutionSerializer,
+    ProvinceSerializer, CitySerializer,
     LeadSourceSerializer, CampaignSerializer, LeadStatusSerializer,
     LeadPrioritySerializer, LeadTagSerializer, LeadTypeSerializer, LeadSerializer,
     LeadCourseInterestSerializer, EnrollmentSerializer, PaymentSerializer,
     LeadCallSerializer, LeadActivitySerializer, FollowUpSerializer,
-    LeadDocumentSerializer, LeadListSerializer, LeadMinSerializer,
+    LeadDocumentSerializer, NotificationSerializer,
+    LeadListSerializer, LeadMinSerializer,
 )
 from apps.lead.filters import (
+    LearningModeFilter, InstitutionFilter,
+    ProvinceFilter, CityFilter,
     LeadSourceFilter, CampaignFilter, LeadStatusFilter,
     LeadPriorityFilter, LeadTagFilter, LeadTypeFilter, LeadFilter,
     LeadCourseInterestFilter, EnrollmentFilter, PaymentFilter,
     LeadCallFilter, LeadActivityFilter, FollowUpFilter, LeadDocumentFilter,
+    NotificationFilter,
 )
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
+from apps.global_config.filters import BranchFilterBackend
 
 
 class ConfigViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -44,6 +51,42 @@ class ConfigViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAuthenticated]
         return [p() for p in permission_classes]
+
+
+class LearningModeViewSet(ConfigViewSet):
+    queryset = LearningMode.objects.all()
+    serializer_class = LearningModeSerializer
+    filterset_class = LearningModeFilter
+    search_fields = ['name', 'code']
+    ordering_fields = ['id', 'name', 'code', 'is_active']
+    ordering = ['name']
+
+
+class InstitutionViewSet(ConfigViewSet):
+    queryset = Institution.objects.all()
+    serializer_class = InstitutionSerializer
+    filterset_class = InstitutionFilter
+    search_fields = ['name', 'code', 'phone']
+    ordering_fields = ['id', 'name', 'is_active']
+    ordering = ['name']
+
+
+class ProvinceViewSet(ConfigViewSet):
+    queryset = Province.objects.all()
+    serializer_class = ProvinceSerializer
+    filterset_class = ProvinceFilter
+    search_fields = ['name', 'code']
+    ordering_fields = ['id', 'name', 'code', 'is_active']
+    ordering = ['name']
+
+
+class CityViewSet(ConfigViewSet):
+    queryset = City.objects.select_related('province')
+    serializer_class = CitySerializer
+    filterset_class = CityFilter
+    search_fields = ['name']
+    ordering_fields = ['id', 'name', 'is_active']
+    ordering = ['name']
 
 
 class LeadSourceViewSet(ConfigViewSet):
@@ -104,14 +147,16 @@ class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.select_related(
         'source', 'campaign', 'branch', 'priority', 'status',
         'assigned_counselor', 'primary_course', 'created_by', 'updated_by',
+        'province', 'city',
     ).prefetch_related('tags')
     pagination_class = CustomPagination
     filterset_class = LeadFilter
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
     search_fields = ['full_name', 'phone', 'email', 'notes', 'reference_number']
     ordering_fields = [
         'id', 'reference_number', 'full_name', 'lead_score', 'expected_revenue',
         'created_at', 'updated_at', 'last_contact_at', 'next_followup_at',
+        'address', 'landmark',
     ]
     ordering = ['-created_at']
 
@@ -149,11 +194,51 @@ class LeadViewSet(viewsets.ModelViewSet):
         instance.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'purge']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
         else:
             permission_classes = [IsAuthenticated]
         return [p() for p in permission_classes]
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
+    filterset_class = NotificationFilter
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(recipient=self.request.user)
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [p() for p in permission_classes]
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        return Response({'detail': 'Notification marked as read.'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({'detail': 'All notifications marked as read.'})
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': count})
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
@@ -223,7 +308,7 @@ class LeadViewSet(viewsets.ModelViewSet):
 class LeadCourseInterestViewSet(viewsets.ModelViewSet):
     serializer_class = LeadCourseInterestSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = LeadCourseInterestFilter
     ordering_fields = ['created_at']
     ordering = ['-is_primary', '-created_at']
@@ -245,7 +330,7 @@ class LeadCourseInterestViewSet(viewsets.ModelViewSet):
 class EnrollmentViewSet(viewsets.ModelViewSet):
     serializer_class = EnrollmentSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = EnrollmentFilter
     ordering_fields = ['enrollment_date', 'created_at']
     ordering = ['-enrollment_date']
@@ -275,7 +360,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = PaymentFilter
     ordering_fields = ['payment_date', 'created_at']
     ordering = ['-payment_date']
@@ -303,7 +388,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 class LeadCallViewSet(viewsets.ModelViewSet):
     serializer_class = LeadCallSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = LeadCallFilter
     ordering_fields = ['call_timestamp', 'duration_seconds']
     ordering = ['-call_timestamp']
@@ -328,7 +413,7 @@ class LeadCallViewSet(viewsets.ModelViewSet):
 class LeadActivityViewSet(viewsets.ModelViewSet):
     serializer_class = LeadActivitySerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = LeadActivityFilter
     ordering_fields = ['activity_at']
     ordering = ['-activity_at']
@@ -353,7 +438,7 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
 class FollowUpViewSet(viewsets.ModelViewSet):
     serializer_class = FollowUpSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = FollowUpFilter
     ordering_fields = ['scheduled_at']
     ordering = ['-scheduled_at']
@@ -383,7 +468,7 @@ class FollowUpViewSet(viewsets.ModelViewSet):
 class LeadDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = LeadDocumentSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = LeadDocumentFilter
     ordering_fields = ['uploaded_at']
     ordering = ['-uploaded_at']

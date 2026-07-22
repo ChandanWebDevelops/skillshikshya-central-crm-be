@@ -1,19 +1,27 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.lead.views import (
+    LearningModeViewSet, InstitutionViewSet,
+    ProvinceViewSet, CityViewSet,
     LeadSourceViewSet, CampaignViewSet, LeadStatusViewSet,
     LeadPriorityViewSet, LeadTagViewSet, LeadTypeViewSet, LeadViewSet,
     LeadCourseInterestViewSet, EnrollmentViewSet, PaymentViewSet,
     LeadCallViewSet, LeadActivityViewSet, FollowUpViewSet, LeadDocumentViewSet,
+    NotificationViewSet,
 )
 
 router = DefaultRouter()
+router.register(r'learning-modes', LearningModeViewSet)
+router.register(r'institutions', InstitutionViewSet)
+router.register(r'provinces', ProvinceViewSet)
+router.register(r'cities', CityViewSet)
 router.register(r'lead-sources', LeadSourceViewSet)
 router.register(r'campaigns', CampaignViewSet)
 router.register(r'lead-statuses', LeadStatusViewSet)
 router.register(r'lead-priorities', LeadPriorityViewSet)
 router.register(r'lead-tags', LeadTagViewSet)
 router.register(r'lead-types', LeadTypeViewSet)
+router.register(r'notifications', NotificationViewSet)
 router.register(r'leads', LeadViewSet)
 
 lead_router = DefaultRouter()

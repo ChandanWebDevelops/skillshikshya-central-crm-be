@@ -9,6 +9,7 @@ from apps.course.filters import CourseFilter
 from apps.course.serializers import CourseSerializer
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
+from apps.global_config.filters import BranchFilterBackend
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -16,7 +17,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     pagination_class = CustomPagination
     filterset_class = CourseFilter
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
     search_fields = ['name', 'remarks']
     ordering_fields = ['id', 'name', 'full_amount', 'course_type']
     ordering = ['name']

@@ -5,10 +5,91 @@ from django.db import models
 from django.db.models import Sum
 
 
+class LearningMode(models.Model):
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='learning_modes',
+    )
+
+    class Meta:
+        db_table = 'learning_modes'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Institution(models.Model):
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='institutions',
+    )
+
+    class Meta:
+        db_table = 'institutions'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Province(models.Model):
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='provinces',
+    )
+
+    class Meta:
+        db_table = 'provinces'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class City(models.Model):
+    name = models.CharField(max_length=255)
+    province = models.ForeignKey(
+        Province, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='cities',
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='cities',
+    )
+
+    class Meta:
+        db_table = 'cities'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class LeadSource(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_sources',
+    )
 
     class Meta:
         db_table = 'lead_sources'
@@ -28,6 +109,10 @@ class Campaign(models.Model):
     end_date = models.DateField(null=True, blank=True)
     budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='campaigns',
+    )
 
     class Meta:
         db_table = 'campaigns'
@@ -43,6 +128,10 @@ class LeadStatus(models.Model):
     sort_order = models.IntegerField(default=0)
     is_final = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_statuses',
+    )
 
     class Meta:
         db_table = 'lead_statuses'
@@ -57,6 +146,10 @@ class LeadPriority(models.Model):
     color = models.CharField(max_length=7, default='#6b7280')
     sort_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_priorities',
+    )
 
     class Meta:
         db_table = 'lead_priorities'
@@ -70,6 +163,10 @@ class LeadTag(models.Model):
     name = models.CharField(max_length=255)
     color = models.CharField(max_length=7, default='#2563eb')
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_tags',
+    )
 
     class Meta:
         db_table = 'lead_tags'
@@ -83,6 +180,10 @@ class LeadType(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_types',
+    )
 
     class Meta:
         db_table = 'lead_types'
@@ -98,6 +199,15 @@ class Lead(models.Model):
     secondary_phone = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     address = models.TextField(null=True, blank=True)
+    province = models.ForeignKey(
+        Province, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='leads',
+    )
+    city = models.ForeignKey(
+        City, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='leads',
+    )
+    landmark = models.CharField(max_length=255, null=True, blank=True)
     lead_type = models.ForeignKey(
         LeadType, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='leads',
@@ -108,6 +218,7 @@ class Lead(models.Model):
         LeadSource, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='leads',
     )
+    heard_from = models.CharField(max_length=500, null=True, blank=True)
     campaign = models.ForeignKey(
         Campaign, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='leads',
@@ -167,6 +278,10 @@ class Lead(models.Model):
     def __str__(self):
         return f'{self.reference_number} - {self.full_name} ({self.phone})'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_assigned_counselor_id = self.assigned_counselor_id
+
     def save(self, *args, **kwargs):
         if not self.reference_number:
             year = datetime.now().year
@@ -192,6 +307,10 @@ class LeadCourseInterest(models.Model):
         max_length=10, choices=InterestLevel.choices, default=InterestLevel.MEDIUM,
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_interests',
+    )
 
     class Meta:
         db_table = 'lead_course_interests'
@@ -228,6 +347,10 @@ class Enrollment(models.Model):
     additional_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     agreed_amount = models.DecimalField(max_digits=12, decimal_places=2)
     remarks = models.TextField(null=True, blank=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='enrollments',
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='enrollments_created',
@@ -293,6 +416,10 @@ class Payment(models.Model):
         null=True, blank=True, related_name='payments_received',
     )
     notes = models.TextField(null=True, blank=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='payments',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -320,6 +447,10 @@ class LeadCall(models.Model):
     duration_seconds = models.IntegerField(default=0)
     outcome = models.CharField(max_length=255, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_calls',
+    )
     recording_url = models.URLField(max_length=500, null=True, blank=True)
     next_followup_at = models.DateTimeField(null=True, blank=True)
     next_action = models.TextField(null=True, blank=True)
@@ -357,6 +488,10 @@ class LeadActivity(models.Model):
     )
     title = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_activities',
+    )
     performed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='activities_performed',
@@ -395,6 +530,10 @@ class FollowUp(models.Model):
     )
     completed_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='followups',
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='followups_created',
@@ -419,6 +558,10 @@ class LeadDocument(models.Model):
         Lead, on_delete=models.CASCADE, related_name='documents',
     )
     document_type = models.CharField(max_length=255)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_documents',
+    )
     file = models.URLField(max_length=500)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -432,3 +575,22 @@ class LeadDocument(models.Model):
 
     def __str__(self):
         return f'{self.document_type} - {self.lead.full_name}'
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='notifications',
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    link = models.CharField(max_length=500, null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notifications'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.title} → {self.recipient.email}'

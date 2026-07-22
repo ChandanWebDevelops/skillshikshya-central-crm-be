@@ -1,5 +1,7 @@
+from django.db.models import Sum
 from rest_framework import serializers
 from apps.student.models import Student, StudentDocument
+from apps.lead.models import Payment
 
 
 class StudentListSerializer(serializers.ModelSerializer):
@@ -25,6 +27,9 @@ class StudentSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.name', read_only=True)
     document_count = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    recent_payments = serializers.SerializerMethodField()
+    enrollment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
@@ -36,6 +41,31 @@ class StudentSerializer(serializers.ModelSerializer):
 
     def get_document_count(self, obj):
         return obj.documents.count()
+
+    def get_total_paid(self, obj):
+        from django.db.models import Sum
+        result = Payment.objects.filter(
+            enrollment__student=obj,
+            status='successful',
+        ).aggregate(Sum('amount'))
+        return result['amount__sum'] or 0
+
+    def get_recent_payments(self, obj):
+        payments = Payment.objects.filter(
+            enrollment__student=obj,
+        ).select_related('enrollment__course').order_by('-payment_date')[:5]
+        return [{
+            'id': p.id,
+            'amount': str(p.amount),
+            'payment_date': p.payment_date,
+            'payment_method': p.payment_method,
+            'status': p.status,
+            'course': p.enrollment.course.name if p.enrollment else None,
+            'transaction_reference': p.transaction_reference,
+        } for p in payments]
+
+    def get_enrollment_count(self, obj):
+        return obj.enrollments.count()
 
 
 class StudentDocumentSerializer(serializers.ModelSerializer):

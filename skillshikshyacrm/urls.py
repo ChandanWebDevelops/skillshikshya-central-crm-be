@@ -10,6 +10,7 @@ from apps.account.auth_views import (
     ResetPasswordView,
 )
 from apps.global_config.views import upload_file, serve_file
+from apps.lead.intake import lead_intake
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('api/', include('apps.lead.urls')),
     path('api/', include('apps.student.urls')),
     path('api/upload/', upload_file, name='upload_file'),
+    path('api/public/lead-intake/', lead_intake, name='lead_intake'),
     re_path(r'^api/files/(?P<key>.+)$', serve_file, name='serve_file'),
 
 

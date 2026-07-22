@@ -8,6 +8,10 @@ The Student app manages student profiles. Students do **not** have login account
 
 ---
 
+**Branch scoping:** See [Lead App API Guide](lead_app_apis_guide.md#branch-scoping) for details. All student endpoints support `?branch_id=X`.
+
+---
+
 ## Student Endpoints
 
 | Method | Endpoint | Description | Access |
@@ -178,6 +182,14 @@ GET /api/students/?ordering=-enrolled_at
 ### GET `/api/students/{id}/` — Get Student Detail
 
 Full detail response including `document_count`, `guardian_*`, `emergency_contact_*`, `photo_url`, `notes`, `lead`, and all timestamps.
+
+**New payment summary fields (read-only):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_paid` | decimal | Sum of all successful payments across all enrollments |
+| `enrollment_count` | integer | Number of enrollments |
+| `recent_payments` | array | Last 5 payments with `amount`, `payment_date`, `payment_method`, `status`, `course`, `transaction_reference` |
 
 ---
 

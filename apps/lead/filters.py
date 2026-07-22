@@ -1,9 +1,41 @@
 import django_filters
 from apps.lead.models import (
-    LeadSource, Campaign, LeadStatus, LeadPriority,
+    LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
     LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
-    LeadCall, LeadActivity, FollowUp, LeadDocument,
+    LeadCall, LeadActivity, FollowUp, LeadDocument, Notification,
 )
+
+
+class LearningModeFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = LearningMode
+        fields = ['name', 'code', 'is_active']
+
+
+class InstitutionFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = Institution
+        fields = ['name', 'code', 'phone', 'is_active']
+
+
+class ProvinceFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = Province
+        fields = ['name', 'code', 'is_active']
+
+
+class CityFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = City
+        fields = ['name', 'province', 'is_active']
 
 
 class LeadSourceFilter(django_filters.FilterSet):
@@ -75,6 +107,8 @@ class LeadFilter(django_filters.FilterSet):
             'source': ['exact', 'in'],
             'campaign': ['exact', 'in'],
             'branch': ['exact', 'in'],
+            'province': ['exact', 'in'],
+            'city': ['exact', 'in'],
             'priority': ['exact'],
             'status': ['exact', 'in'],
             'assigned_counselor': ['exact'],
@@ -148,3 +182,9 @@ class LeadDocumentFilter(django_filters.FilterSet):
     class Meta:
         model = LeadDocument
         fields = ['lead', 'document_type']
+
+
+class NotificationFilter(django_filters.FilterSet):
+    class Meta:
+        model = Notification
+        fields = ['recipient', 'is_read']

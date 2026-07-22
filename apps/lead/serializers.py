@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from apps.lead.models import (
-    LeadSource, Campaign, LeadStatus, LeadPriority,
+    LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
     LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
-    LeadCall, LeadActivity, FollowUp, LeadDocument,
+    LeadCall, LeadActivity, FollowUp, LeadDocument, Notification,
 )
 
 
@@ -39,6 +39,32 @@ class LeadTagSerializer(serializers.ModelSerializer):
 class LeadTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeadType
+        fields = '__all__'
+
+
+class LearningModeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LearningMode
+        fields = '__all__'
+
+
+class InstitutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Institution
+        fields = '__all__'
+
+
+class ProvinceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Province
+        fields = '__all__'
+
+
+class CitySerializer(serializers.ModelSerializer):
+    province_name = serializers.CharField(source='province.name', read_only=True)
+
+    class Meta:
+        model = City
         fields = '__all__'
 
 
@@ -95,6 +121,8 @@ class LeadListSerializer(serializers.ModelSerializer):
     assigned_counselor_name = serializers.CharField(source='assigned_counselor.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
     primary_course_name = serializers.CharField(source='primary_course.name', read_only=True)
+    province_name = serializers.CharField(source='province.name', read_only=True)
+    city_name = serializers.CharField(source='city.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.name', read_only=True)
 
@@ -114,6 +142,8 @@ class LeadSerializer(serializers.ModelSerializer):
     assigned_counselor_name = serializers.CharField(source='assigned_counselor.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
     primary_course_name = serializers.CharField(source='primary_course.name', read_only=True)
+    province_name = serializers.CharField(source='province.name', read_only=True)
+    city_name = serializers.CharField(source='city.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.name', read_only=True)
 
@@ -193,3 +223,10 @@ class LeadDocumentSerializer(serializers.ModelSerializer):
         model = LeadDocument
         fields = '__all__'
         read_only_fields = ['lead', 'uploaded_by', 'uploaded_at']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = '__all__'
+        read_only_fields = ['recipient', 'created_at']

@@ -89,6 +89,10 @@ class StudentDocument(models.Model):
         Student, on_delete=models.CASCADE, related_name='documents',
     )
     document_type = models.CharField(max_length=255)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='student_documents',
+    )
     file = models.URLField(max_length=500)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,

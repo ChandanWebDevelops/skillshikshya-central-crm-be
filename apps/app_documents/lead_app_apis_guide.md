@@ -8,6 +8,110 @@ The Lead app manages leads from inquiry through conversion, enrollment, and paym
 
 ---
 
+## Branch Scoping
+
+All endpoints support branch-level filtering via the `branch_id` query parameter.
+
+| User type | Behavior |
+|-----------|----------|
+| **Staff / Superuser** | Can see data across all branches by default. Pass `?branch_id=X` to filter. |
+| **Non-staff with branch** | Automatically scoped to their assigned branch — cannot see data from other branches. |
+| **Non-staff without branch** | See all data (no restriction). |
+
+The `branch_id` parameter works on every list endpoint (leads, courses, students, lead sources, campaigns, provinces, cities, learning modes, institutions, all nested lead resources, student documents, etc.).
+
+**Examples:**
+```
+GET /api/leads/?branch_id=1
+GET /api/courses/?branch_id=2
+GET /api/lead-sources/?branch_id=1
+GET /api/students/?branch_id=1&status=active
+```
+
+---
+
+## Learning Mode & Institution Endpoints
+
+### Learning Modes
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/learning-modes/` | List learning modes |
+| POST | `/api/learning-modes/` | Create learning mode |
+| GET/PUT/PATCH/DELETE | `/api/learning-modes/{id}/` | CRUD |
+
+**Fields:** `id`, `name`, `code` (unique), `is_active`
+
+**Query params:** `?search=online&name=Online&code=ONLINE&is_active=true`
+
+**Default examples:** Online, Offline, Hybrid
+
+### Institutions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/institutions/` | List institutions |
+| POST | `/api/institutions/` | Create institution |
+| GET/PUT/PATCH/DELETE | `/api/institutions/{id}/` | CRUD |
+
+**Fields:** `id`, `name`, `code` (unique), `address`, `phone`, `is_active`
+
+**Query params:** `?search=tribhuvan&name=university&code=TU&phone=01&is_active=true`
+
+**Note:** The frontend can use the POST endpoint to create an institution on-the-fly when it's not found in the dropdown list.
+
+---
+
+## Location Configuration Endpoints
+
+### Provinces
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/provinces/` | List provinces |
+| POST | `/api/provinces/` | Create province |
+| GET/PUT/PATCH/DELETE | `/api/provinces/{id}/` | CRUD |
+
+**Fields:** `id`, `name`, `code`, `is_active`
+
+**Query params:** `?search=bag&name=bagmati&is_active=true`
+
+### Cities
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cities/` | List cities |
+| POST | `/api/cities/` | Create city |
+| GET/PUT/PATCH/DELETE | `/api/cities/{id}/` | CRUD |
+
+**Fields:** `id`, `name`, `province` (FK), `province_name` (read), `is_active`
+
+**Query params:** `?search=kath&province=1&is_active=true`
+
+---
+
+## Notifications
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| GET | `/api/notifications/` | List notifications for current user | Authenticated (self only) |
+| GET | `/api/notifications/{id}/` | Get notification detail | Authenticated (self only) |
+| POST | `/api/notifications/{id}/mark_read/` | Mark single notification as read | Authenticated (self only) |
+| POST | `/api/notifications/mark_all_read/` | Mark all notifications as read | Authenticated (self only) |
+| GET | `/api/notifications/unread_count/` | Get unread count | Authenticated (self only) |
+
+Notifications are created automatically when a counselor is assigned to a lead. Each notification includes `title`, `message`, `link` (URL to the lead), `is_read`, and `created_at`.
+
+**Query params:** `?is_read=false`
+
+### Counselor Assignment Notification Flow
+
+When a lead's `assigned_counselor` changes:
+1. A `Notification` record is created for the new counselor (in-app)
+2. An email is sent to the counselor's email address with the lead details
+
+---
+
 ## Lead Configuration Endpoints
 
 These endpoints manage lookup/dropdown values. All follow the same pattern:
@@ -108,6 +212,12 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `address` | text | Full address/landmark details |
+| `province` | int (FK) | Province ID — see `/api/provinces/` |
+| `province_name` | string (read-only) | Province display name |
+| `city` | int (FK) | City ID — see `/api/cities/` |
+| `city_name` | string (read-only) | City display name |
+| `landmark` | string | Nearby landmark or area name |
 | `reference_number` | string (read-only) | Auto-generated `LD-{YEAR}-{seq:06d}` — searchable |
 | `custom_data` | JSON (writable) | Arbitrary key-value store for type-specific fields |
 | `is_archived` | bool | Soft archive flag |
@@ -129,6 +239,10 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
     "full_name": "Rahul Sharma",
     "phone": "9812345678",
     "email": "rahul@example.com",
+    "address": "House no. 5, near the temple",
+    "province": 1,
+    "city": 1,
+    "landmark": "Near Durbar Square",
     "lead_type": "course_inquiry",
     "source": 1,
     "campaign": 1,
@@ -177,6 +291,10 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 | `campaign__in` | string | Filter by multiple campaigns |
 | `branch` | int | Filter by branch ID |
 | `branch__in` | string | Filter by multiple branches |
+| `province` | int | Filter by province ID |
+| `province__in` | string | Filter by multiple provinces |
+| `city` | int | Filter by city ID |
+| `city__in` | string | Filter by multiple cities |
 | `priority` | int | Filter by priority ID |
 | `status` | int | Filter by status ID |
 | `status__in` | string | Filter by multiple statuses |
@@ -196,7 +314,7 @@ These endpoints manage lookup/dropdown values. All follow the same pattern:
 | `created_at__lte` | datetime | Created before |
 | `next_followup_at__gte` | datetime | Followup after |
 | `next_followup_at__lte` | datetime | Followup before |
-| `ordering` | string | Order by `id`, `reference_number`, `full_name`, `lead_score`, `expected_revenue`, `created_at`, `updated_at`, `last_contact_at`, `next_followup_at` (prefix `-` for desc) |
+| `ordering` | string | Order by `id`, `reference_number`, `full_name`, `lead_score`, `expected_revenue`, `created_at`, `updated_at`, `last_contact_at`, `next_followup_at`, `address`, `landmark` (prefix `-` for desc) |
 | `page` | int | Page number |
 | `page_size` | int | Items per page (max 100) |
 
@@ -573,6 +691,10 @@ All nested endpoints are scoped under a specific lead. The `lead` field is auto-
 - `lead.add_leadpriority`, etc.
 - `lead.add_leadtag`, etc.
 - `lead.add_leadtype`, `lead.change_leadtype`, `lead.delete_leadtype`, `lead.view_leadtype`
+- `lead.add_learningmode`, `lead.change_learningmode`, `lead.delete_learningmode`, `lead.view_learningmode`
+- `lead.add_institution`, `lead.change_institution`, `lead.delete_institution`, `lead.view_institution`
+- `lead.add_province`, `lead.change_province`, `lead.delete_province`, `lead.view_province`
+- `lead.add_city`, `lead.change_city`, `lead.delete_city`, `lead.view_city`
 - `lead.add_leadcall`, `lead.change_leadcall`, `lead.delete_leadcall`, `lead.view_leadcall`
 - `lead.add_leadactivity`, `lead.change_leadactivity`, `lead.delete_leadactivity`, `lead.view_leadactivity`
 - `lead.add_followup`, `lead.change_followup`, `lead.delete_followup`, `lead.view_followup`
@@ -580,3 +702,4 @@ All nested endpoints are scoped under a specific lead. The `lead` field is auto-
 - `lead.add_leadcourseinterest`, `lead.change_leadcourseinterest`, `lead.delete_leadcourseinterest`, `lead.view_leadcourseinterest`
 - `lead.add_enrollment`, `lead.change_enrollment`, `lead.delete_enrollment`, `lead.view_enrollment`
 - `lead.add_payment`, `lead.change_payment`, `lead.delete_payment`, `lead.view_payment`
+- `lead.add_notification`, `lead.change_notification`, `lead.delete_notification`, `lead.view_notification`

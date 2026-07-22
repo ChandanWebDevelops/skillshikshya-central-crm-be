@@ -17,6 +17,7 @@ from apps.student.serializers import (
 from apps.student.filters import StudentFilter, StudentDocumentFilter
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
+from apps.global_config.filters import BranchFilterBackend
 
 
 class StudentViewSet(viewsets.ModelViewSet):
@@ -25,7 +26,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     )
     pagination_class = CustomPagination
     filterset_class = StudentFilter
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
     search_fields = [
         'student_id', 'full_name', 'phone', 'email',
         'guardian_name', 'guardian_phone', 'notes',
@@ -84,7 +85,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 class StudentDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentDocumentSerializer
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
     filterset_class = StudentDocumentFilter
     ordering_fields = ['uploaded_at']
     ordering = ['-uploaded_at']
