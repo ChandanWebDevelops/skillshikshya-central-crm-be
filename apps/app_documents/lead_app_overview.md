@@ -258,4 +258,5 @@ This endpoint allows unauthenticated lead creation from external websites, landi
 | [Documents API Guide](lead_app_documents_api_guide.md) | LeadDocument endpoints |
 | [Course Interests API Guide](lead_app_course_interests_api_guide.md) | LeadCourseInterest endpoints |
 | [Enrollments & Payments API Guide](lead_app_enrollments_payments_api_guide.md) | Enrollment + Payment endpoints |
+| [Global List Endpoints API Guide](lead_app_global_list_api_guide.md) | Flat cross-lead lists for followups, enrollments, payments |
 | [Notifications API Guide](lead_app_notifications_api_guide.md) | Notification endpoints |

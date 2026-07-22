@@ -184,6 +184,34 @@ class LeadDocumentFilter(django_filters.FilterSet):
         fields = ['lead', 'document_type']
 
 
+class GlobalEnrollmentFilter(django_filters.FilterSet):
+    enrollment_date__gte = django_filters.DateFilter(field_name='enrollment_date', lookup_expr='gte')
+    enrollment_date__lte = django_filters.DateFilter(field_name='enrollment_date', lookup_expr='lte')
+
+    class Meta:
+        model = Enrollment
+        fields = {
+            'lead': ['exact'],
+            'course': ['exact'],
+            'status': ['exact', 'in'],
+            'batch': ['exact'],
+        }
+
+
+class GlobalPaymentFilter(django_filters.FilterSet):
+    payment_date__gte = django_filters.DateTimeFilter(field_name='payment_date', lookup_expr='gte')
+    payment_date__lte = django_filters.DateTimeFilter(field_name='payment_date', lookup_expr='lte')
+    lead = django_filters.NumberFilter(field_name='enrollment__lead_id')
+
+    class Meta:
+        model = Payment
+        fields = {
+            'enrollment': ['exact'],
+            'payment_method': ['exact'],
+            'status': ['exact', 'in'],
+        }
+
+
 class NotificationFilter(django_filters.FilterSet):
     class Meta:
         model = Notification

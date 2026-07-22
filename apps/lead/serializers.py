@@ -226,6 +226,69 @@ class LeadDocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ['lead', 'uploaded_by', 'uploaded_at']
 
 
+class GlobalFollowUpSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.full_name', read_only=True)
+    lead_phone = serializers.CharField(source='lead.phone', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+
+    class Meta:
+        model = FollowUp
+        fields = [
+            'id', 'lead', 'lead_name', 'lead_phone',
+            'assigned_to', 'assigned_to_name',
+            'scheduled_at', 'purpose', 'status',
+            'branch', 'branch_name',
+        ]
+        read_only_fields = fields
+
+
+class GlobalEnrollmentSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.full_name', read_only=True)
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    course_name = serializers.CharField(source='course.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+    total_paid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    is_full_paid = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            'id', 'lead', 'lead_name',
+            'student', 'student_name',
+            'course', 'course_name',
+            'batch', 'status', 'enrollment_date',
+            'listed_fee', 'agreed_amount',
+            'total_paid', 'remaining_amount', 'is_full_paid',
+            'branch', 'branch_name',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+class GlobalPaymentSerializer(serializers.ModelSerializer):
+    lead = serializers.IntegerField(source='enrollment.lead_id', read_only=True)
+    lead_name = serializers.CharField(source='enrollment.lead.full_name', read_only=True)
+    course_name = serializers.CharField(source='enrollment.course.name', read_only=True)
+    received_by_name = serializers.CharField(source='received_by.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = [
+            'id', 'enrollment',
+            'lead', 'lead_name',
+            'course_name',
+            'amount', 'payment_date',
+            'payment_method', 'transaction_reference',
+            'status',
+            'received_by', 'received_by_name',
+            'branch', 'branch_name',
+        ]
+        read_only_fields = fields
+
+
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification

@@ -2,9 +2,13 @@
 
 **Base URL:** `http://localhost:8188`
 
+## Global List Endpoint
+
+A flat read-only list across all leads is available at `GET /api/followups/`. See [Global List Endpoints Guide](lead_app_global_list_api_guide.md) for details.
+
 ## Endpoints
 
-All endpoints are nested under a specific lead.
+All CRUD endpoints are nested under a specific lead.
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|

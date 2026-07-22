@@ -4,11 +4,19 @@
 
 ---
 
+## Global List Endpoints
+
+Flat read-only lists across all leads are available at:
+- `GET /api/enrollments/` — All enrollments
+- `GET /api/payments/` — All payments
+
+See [Global List Endpoints Guide](lead_app_global_list_api_guide.md) for details.
+
 ## Enrollments
 
 ### Endpoints
 
-All endpoints are nested under a specific lead.
+All CRUD endpoints are nested under a specific lead.
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
@@ -111,6 +119,8 @@ All endpoints are nested under a specific lead.
 ---
 
 ## Payments (nested under Enrollment)
+
+A flat read-only list across all enrollments/leads is available at `GET /api/payments/`.
 
 ### Endpoints
 

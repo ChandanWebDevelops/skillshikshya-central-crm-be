@@ -26,6 +26,7 @@ from apps.lead.serializers import (
     LeadCallSerializer, LeadActivitySerializer, FollowUpSerializer,
     LeadDocumentSerializer, NotificationSerializer,
     LeadListSerializer, LeadMinSerializer,
+    GlobalFollowUpSerializer, GlobalEnrollmentSerializer, GlobalPaymentSerializer,
 )
 from apps.lead.filters import (
     LearningModeFilter, InstitutionFilter,
@@ -35,6 +36,7 @@ from apps.lead.filters import (
     LeadCourseInterestFilter, EnrollmentFilter, PaymentFilter,
     LeadCallFilter, LeadActivityFilter, FollowUpFilter, LeadDocumentFilter,
     NotificationFilter,
+    GlobalEnrollmentFilter, GlobalPaymentFilter,
 )
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
@@ -199,6 +201,63 @@ class LeadViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAuthenticated]
         return [p() for p in permission_classes]
+
+
+class GlobalFollowUpViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = GlobalFollowUpSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
+    filterset_class = FollowUpFilter
+    ordering_fields = ['scheduled_at', 'created_at']
+    ordering = ['-scheduled_at']
+
+    def get_queryset(self):
+        return FollowUp.objects.select_related(
+            'lead', 'assigned_to', 'branch',
+        )
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsStaffOrHasPermission()]
+
+
+class GlobalEnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = GlobalEnrollmentSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
+    filterset_class = GlobalEnrollmentFilter
+    ordering_fields = ['enrollment_date', 'agreed_amount', 'created_at']
+    ordering = ['-enrollment_date']
+
+    def get_queryset(self):
+        return Enrollment.objects.select_related(
+            'lead', 'student', 'course', 'branch',
+        )
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsStaffOrHasPermission()]
+
+
+class GlobalPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = GlobalPaymentSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
+    filterset_class = GlobalPaymentFilter
+    ordering_fields = ['payment_date', 'amount', 'created_at']
+    ordering = ['-payment_date']
+
+    def get_queryset(self):
+        return Payment.objects.select_related(
+            'enrollment', 'enrollment__lead', 'enrollment__course', 'received_by', 'branch',
+        )
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsStaffOrHasPermission()]
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
