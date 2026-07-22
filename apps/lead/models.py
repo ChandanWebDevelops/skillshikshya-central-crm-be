@@ -283,6 +283,8 @@ class Lead(models.Model):
         self._original_assigned_counselor_id = self.assigned_counselor_id
 
     def compute_lead_score(self):
+        if not self.pk:
+            return 0
         if self.is_converted:
             return 100
         if self.status and self.status.is_final:

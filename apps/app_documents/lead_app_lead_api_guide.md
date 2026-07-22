@@ -77,7 +77,7 @@
 
 ### Lead Score (computed, never writable)
 
-`lead_score` is automatically computed whenever the lead is saved. Formula:
+`lead_score` is automatically computed whenever the lead is updated. Newly created leads start at `0` — the score is calculated once the lead has a status, priority, or related records (calls, activities, followups). Formula:
 
 | Factor | Max Points | Details |
 |--------|-----------|---------|
@@ -89,7 +89,7 @@
 | **Converted** | 100 | Fixed at 100 |
 | **Final status** | 0 | Status with `is_final=true` resets to 0 |
 
-Total clamped to 0–100.
+Total clamped to 0–100. New leads start at 0; score updates on the next `PATCH` or when a call/activity/followup is added.
 
 ---
 
