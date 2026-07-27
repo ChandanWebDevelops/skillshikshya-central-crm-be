@@ -338,7 +338,11 @@ class LeadCourseInterest(models.Model):
         LOW = 'low', 'Low'
 
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='course_interests')
-    course = models.ForeignKey('course.Course', on_delete=models.CASCADE, related_name='lead_interests')
+    course = models.ForeignKey(
+        'course.Course', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lead_interests',
+    )
+    course_name = models.CharField(max_length=255, null=True, blank=True)
     is_primary = models.BooleanField(default=False)
     interest_level = models.CharField(
         max_length=10, choices=InterestLevel.choices, default=InterestLevel.MEDIUM,
@@ -352,10 +356,10 @@ class LeadCourseInterest(models.Model):
     class Meta:
         db_table = 'lead_course_interests'
         ordering = ['-is_primary', '-created_at']
-        unique_together = ['lead', 'course']
 
     def __str__(self):
-        return f'{self.lead.full_name} → {self.course.name}'
+        name = self.course.name if self.course else self.course_name
+        return f'{self.lead.full_name} → {name or "?"}'
 
 
 class Enrollment(models.Model):
@@ -562,6 +566,7 @@ class FollowUp(models.Model):
     scheduled_at = models.DateTimeField()
     purpose = models.TextField(null=True, blank=True)
     reminder_at = models.DateTimeField(null=True, blank=True)
+    reminder_sent = models.BooleanField(default=False)
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING,
     )

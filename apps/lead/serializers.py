@@ -69,12 +69,15 @@ class CitySerializer(serializers.ModelSerializer):
 
 
 class LeadCourseInterestSerializer(serializers.ModelSerializer):
-    course_name = serializers.CharField(source='course.name', read_only=True)
+    course_name = serializers.SerializerMethodField()
 
     class Meta:
         model = LeadCourseInterest
         fields = '__all__'
-        read_only_fields = ['lead', 'created_at']
+        read_only_fields = ['lead', 'created_at', 'course_name']
+
+    def get_course_name(self, obj):
+        return obj.course.name if obj.course else obj.course_name
 
 
 class EnrollmentSerializer(serializers.ModelSerializer):
@@ -214,7 +217,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = FollowUp
         fields = '__all__'
-        read_only_fields = ['lead', 'created_by', 'updated_by', 'created_at', 'updated_at']
+        read_only_fields = ['lead', 'created_by', 'updated_by', 'created_at', 'updated_at', 'reminder_sent']
 
 
 class LeadDocumentSerializer(serializers.ModelSerializer):

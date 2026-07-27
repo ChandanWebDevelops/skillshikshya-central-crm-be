@@ -30,7 +30,8 @@ All CRUD endpoints are nested under a specific lead.
 | `assigned_to_name` | string (read-only) | Assignee display name |
 | `scheduled_at` | datetime | When the followup is scheduled |
 | `purpose` | text | Purpose of the followup |
-| `reminder_at` | datetime | When to send a reminder |
+| `reminder_at` | datetime | When to send a reminder (Celery Beat checks every 5 min) |
+| `reminder_sent` | bool (read-only) | Whether the reminder email/notification has been sent |
 | `status` | string | `pending`, `completed`, `missed`, `cancelled` |
 | `completed_at` | datetime | When actually completed |
 | `notes` | text | Followup notes after completion |
@@ -42,6 +43,19 @@ All CRUD endpoints are nested under a specific lead.
 | `updated_at` | datetime (read-only) | |
 
 ### Auto-updates on Lead
+
+## Automatic Reminders
+
+When a followup is created with a `reminder_at` datetime, a Celery Beat task runs every 5 minutes and:
+
+1. Finds all pending followups where `reminder_at` is within the current 5-minute window and `reminder_sent` is `false`
+2. Creates an in-app `Notification` for the `assigned_to` user (or the lead's `assigned_counselor` if no assignee)
+3. Sends an HTML email with followup details and a "View Lead" link
+4. Sets `reminder_sent = true` to prevent duplicate reminders
+
+**Fields:** `reminder_at` (writable datetime), `reminder_sent` (read-only boolean, auto-set by the task)
+
+---
 
 When a followup is created with `status: "pending"`:
 

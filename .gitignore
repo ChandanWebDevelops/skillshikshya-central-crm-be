@@ -87,3 +87,6 @@ env/
 # Backup files
 backup/
 ui-prototype/
+
+# Celery beat schedule file
+celerybeat-schedule

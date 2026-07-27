@@ -145,6 +145,27 @@ Lead score uses `sort_order` — priority 1 (highest) gives the most points.
 
 ## Learning Mode & Institution Endpoints
 
+### Course Interests from External Intake
+
+The external intake endpoint accepts course interests as plain text names — not IDs:
+
+| Field | Format | Example |
+|-------|--------|---------|
+| `course_interests` | `array` of strings | `["Python Advanced", "Flutter"]` |
+| `course` | `string` (singular, alternative) | `"Python Advanced"` |
+| `courses` | `string` (comma-separated, alternative) | `"Python Advanced, Flutter"` |
+
+**How it's stored:**
+
+| Scenario | `course` (FK) | `course_name` (fallback) |
+|---|---|---|
+| Name matches an existing course in the CRM | Linked to matched course | `null` |
+| Name does NOT match any course | `null` | Stores the raw submitted name |
+
+The `course_name` field on the response always shows the correct display name regardless of how it was stored.
+
+---
+
 ### Learning Modes
 
 | Method | Endpoint | Description |

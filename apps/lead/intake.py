@@ -57,7 +57,7 @@ def lead_intake(request):
         notes=data.get('notes', ''),
     )
 
-    courses_raw = data.get('course') or data.get('courses', '')
+    courses_raw = data.get('course_interests') or data.get('course') or data.get('courses', '')
     if isinstance(courses_raw, str):
         course_names = [c.strip() for c in courses_raw.split(',') if c.strip()]
     elif isinstance(courses_raw, list):
@@ -67,13 +67,13 @@ def lead_intake(request):
 
     for i, name in enumerate(course_names):
         course = Course.objects.filter(name__iexact=name).first()
-        if course:
-            LeadCourseInterest.objects.create(
-                lead=lead,
-                course=course,
-                is_primary=(i == 0),
-                interest_level='high',
-            )
+        LeadCourseInterest.objects.create(
+            lead=lead,
+            course=course if course else None,
+            course_name=name if not course else None,
+            is_primary=(i == 0),
+            interest_level='high',
+        )
 
     return Response(
         {'reference_number': lead.reference_number, 'id': lead.id},

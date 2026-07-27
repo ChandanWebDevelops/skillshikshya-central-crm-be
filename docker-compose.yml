@@ -86,5 +86,32 @@ services:
       - db
       - redis
 
+  celery_beat:
+    build: .
+    container_name: skillshikshyacrm_celery_beat
+    restart: unless-stopped
+    command: celery -A skillshikshyacrm beat -l info
+    volumes:
+      - .:/app
+    environment:
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      DB_ENGINE: ${DB_ENGINE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      PUBLIC_DEVELOPMENT_URL: ${PUBLIC_DEVELOPMENT_URL}
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:

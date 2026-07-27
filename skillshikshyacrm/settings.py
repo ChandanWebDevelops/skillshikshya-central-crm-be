@@ -22,6 +22,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+CELERY_BEAT_SCHEDULE = {
+    'send-followup-reminders-every-5-minutes': {
+        'task': 'apps.lead.tasks.send_followup_reminders_task',
+        'schedule': 300,  # every 5 minutes
+    },
+}
+
 
 # Email
 

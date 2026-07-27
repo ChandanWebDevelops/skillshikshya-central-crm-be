@@ -204,6 +204,7 @@ class LeadViewSet(viewsets.ModelViewSet):
 
 
 class GlobalFollowUpViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = FollowUp.objects.none()
     serializer_class = GlobalFollowUpSerializer
     pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
@@ -223,6 +224,7 @@ class GlobalFollowUpViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class GlobalEnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Enrollment.objects.none()
     serializer_class = GlobalEnrollmentSerializer
     pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
@@ -242,6 +244,7 @@ class GlobalEnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class GlobalPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Payment.objects.none()
     serializer_class = GlobalPaymentSerializer
     pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, BranchFilterBackend]
