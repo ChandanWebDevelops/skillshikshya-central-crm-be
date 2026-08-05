@@ -99,6 +99,9 @@ class LeadFilter(django_filters.FilterSet):
     created_at__lte = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')
     next_followup_at__gte = django_filters.DateTimeFilter(field_name='next_followup_at', lookup_expr='gte')
     next_followup_at__lte = django_filters.DateTimeFilter(field_name='next_followup_at', lookup_expr='lte')
+    created_date = django_filters.DateFilter(field_name='created_at', lookup_expr='date')
+    from_date = django_filters.DateFilter(field_name='created_at', lookup_expr='date__gte')
+    to_date = django_filters.DateFilter(field_name='created_at', lookup_expr='date__lte')
 
     class Meta:
         model = Lead

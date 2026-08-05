@@ -1,5 +1,12 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+
+
+def _generate_course_prefix(course_name):
+    words = (course_name or '').upper().replace('/', ' ').split()
+    prefix = ''.join(w[0] for w in words if w)[:3]
+    return prefix or 'CRS'
 
 
 class Course(models.Model):
@@ -40,3 +47,73 @@ class Course(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Batch(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='batches',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='batches_created',
+    )
+
+    class Meta:
+        db_table = 'batches'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class CourseBatch(models.Model):
+    name = models.CharField(max_length=255)
+    coursebatch_id = models.CharField(max_length=50, unique=True, editable=False)
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name='course_batches',
+    )
+    batch = models.ForeignKey(
+        Batch, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_batches',
+    )
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_batches',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_batches_created',
+    )
+
+    class Meta:
+        db_table = 'course_batches'
+        ordering = ['-created_at']
+        unique_together = ['course', 'batch', 'start_date']
+
+    def save(self, *args, **kwargs):
+        if not self.coursebatch_id:
+            prefix = _generate_course_prefix(self.course.name if self.course else '')
+            year = timezone.now().year
+            last = CourseBatch.objects.filter(
+                coursebatch_id__startswith=f'{prefix}-{year}-'
+            ).order_by('coursebatch_id').last()
+            if last:
+                seq = int(last.coursebatch_id.rsplit('-', 1)[-1]) + 1
+            else:
+                seq = 1
+            self.coursebatch_id = f'{prefix}-{year}-{seq:03d}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.coursebatch_id or self.name

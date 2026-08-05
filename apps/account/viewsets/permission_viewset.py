@@ -19,7 +19,14 @@ class PermissionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         'enrollment', 'payment', 'leadcall', 'leadactivity',
         'followup', 'leaddocument', 'notification',
         'student', 'studentdocument', 'attendance',
-    ])
+    ]
+    ).exclude(  # exclude by
+        content_type__app_label='auth',
+        codename__in=['add_permission', 'change_permission', 'delete_permission'],
+    )#.exclude(
+    #     codename__startswith='delete_',
+    #     content_type__model__in=['user', 'group', 'branch'],
+    # )
     serializer_class = PermissionSerializer
     permission_classes = [IsAdminUser]
     pagination_class = CustomPagination

@@ -90,3 +90,6 @@ ui-prototype/
 
 # Celery beat schedule file
 celerybeat-schedule
+
+# my files
+imp_notes.txt

@@ -179,6 +179,9 @@ Total clamped to 0–100. New leads start at 0; score updates on the next `PATCH
 | `expected_revenue__lte` | number | Max expected revenue |
 | `created_at__gte` | datetime | Created after |
 | `created_at__lte` | datetime | Created before |
+| `created_date` | date | Single created date (`YYYY-MM-DD`) — exact day |
+| `from_date` | date | Created on or after this date (`YYYY-MM-DD`) |
+| `to_date` | date | Created on or before this date (`YYYY-MM-DD`) |
 | `next_followup_at__gte` | datetime | Followup after |
 | `next_followup_at__lte` | datetime | Followup before |
 | `last_contact_at__gte` | datetime | Contacted after |
@@ -199,6 +202,8 @@ GET /api/leads/?lead_score__gte=10&ordering=-lead_score
 GET /api/leads/?include_archived=true
 GET /api/leads/?is_archived=true&include_archived=true
 GET /api/leads/?created_at__gte=2026-07-01T00:00:00Z
+GET /api/leads/?created_date=2026-08-04
+GET /api/leads/?from_date=2026-08-01&to_date=2026-08-31
 GET /api/leads/?assigned_counselor=1&lead_score__gte=50
 ```
 

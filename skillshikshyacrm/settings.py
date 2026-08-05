@@ -6,6 +6,7 @@ Generated skeleton for 'skillshikshyacrm'.
 from pathlib import Path
 import os
 from datetime import timedelta
+from celery.schedules import crontab
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -27,6 +28,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.lead.tasks.send_followup_reminders_task',
         'schedule': 300,  # every 5 minutes
     },
+    # 'poll-orbitchat-leads-daily': {
+    #     'task': 'apps.orbitchat.tasks.poll_orbitchat_leads_task',
+    #     'schedule': crontab(hour=0, minute=0),  # daily at midnight UTC
+    # },
 }
 
 
@@ -80,6 +85,7 @@ INSTALLED_APPS = [
     'apps.course',
     'apps.global_config',
     'apps.lead',
+    'apps.orbitchat',
     'apps.student',
 ]
 
@@ -179,6 +185,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'account.User'
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+# OrbitChat Integration
+
+ORBITCHAT_API_URL = os.environ.get('ORBITCHAT_API_URL', 'https://base.orbitchat.ai')
+ORBITCHAT_EMAIL = os.environ.get('ORBITCHAT_EMAIL', '')
+ORBITCHAT_PASSWORD = os.environ.get('ORBITCHAT_PASSWORD', '')
 
 PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
 
