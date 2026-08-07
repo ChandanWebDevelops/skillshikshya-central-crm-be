@@ -17,11 +17,11 @@ class Course(models.Model):
 
     course_type = models.CharField(
         max_length=20, choices=CourseType.choices,
-        verbose_name='Course Type',
+        null=True, blank=True, verbose_name='Course Type',
     )
     name = models.CharField(max_length=255)
     full_amount = models.DecimalField(
-        max_digits=12, decimal_places=2,
+        max_digits=12, decimal_places=2, null=True, blank=True, default=None,
         verbose_name='Full Amount',
     )
     one_time_payment_discount = models.DecimalField(
@@ -40,10 +40,36 @@ class Course(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='courses_created',
     )
+    categories = models.ManyToManyField(
+        'CourseCategory', related_name='courses', blank=True,
+    )
 
     class Meta:
         db_table = 'courses'
         ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+
+class CourseCategory(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_categories',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='course_categories_created',
+    )
+
+    class Meta:
+        db_table = 'course_categories'
+        ordering = ['name']
 
     def __str__(self):
         return self.name

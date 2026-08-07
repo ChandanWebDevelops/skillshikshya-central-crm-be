@@ -1,12 +1,25 @@
 from rest_framework import serializers
-from apps.course.models import Course, Batch, CourseBatch
+from apps.course.models import Course, Batch, CourseBatch, CourseCategory
 
 
 class CourseSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    category_names = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+
+    def get_category_names(self, obj):
+        return [c.name for c in obj.categories.all()]
+
+
+class CourseCategorySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+
+    class Meta:
+        model = CourseCategory
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
 

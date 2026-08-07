@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.lead.models import LeadSource, LeadType, Lead, LeadCourseInterest
-from apps.course.models import Course
+from apps.course.matching import match_or_create_course
 
 
 @api_view(['POST'])
@@ -66,10 +66,10 @@ def lead_intake(request):
         course_names = []
 
     for i, name in enumerate(course_names):
-        course = Course.objects.filter(name__iexact=name).first()
+        course, _ = match_or_create_course(name)
         LeadCourseInterest.objects.create(
             lead=lead,
-            course=course if course else None,
+            course=course,
             course_name=name if not course else None,
             is_primary=(i == 0),
             interest_level='high',

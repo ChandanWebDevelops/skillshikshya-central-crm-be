@@ -161,10 +161,13 @@ The external intake endpoint accepts course interests as plain text names — no
 
 | Scenario | `course` (FK) | `course_name` (fallback) |
 |---|---|---|
-| Name matches an existing course in the CRM | Linked to matched course | `null` |
-| Name does NOT match any course | `null` | Stores the raw submitted name |
+| Name matches a course in the public catalog (`base.skillshikshya.com/api/course/`) | Linked to matched/imported course (amount & categories from API) | `null` |
+| Public API unavailable and name matches a local CRM course | Linked to matched course | `null` |
+| Name matches nothing | Auto-creates a new `Course` (amount `0.00`) | `null` (always an FK now) |
 
 The `course_name` field on the response always shows the correct display name regardless of how it was stored.
+
+Auto-created/imported courses should be reviewed by staff to set the real `full_amount` and `course_type`. See [Course App Guide](course_app_apis_guide.md#external-intake-course-matching) for details.
 
 ---
 

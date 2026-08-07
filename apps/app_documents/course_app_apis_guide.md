@@ -284,3 +284,56 @@ GET /api/course-batches/?batch=2
 GET /api/course-batches/?search=PY-2026-001
 GET /api/course-batches/?ordering=-start_date
 ```
+
+---
+
+## Course Categories
+
+Courses can belong to one or more categories (e.g. Marketing, Engineering, Designing).
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| GET | `/api/course-categories/` | List categories (paginated) | Authenticated |
+| POST | `/api/course-categories/` | Create a category | Staff or `course.add_coursecategory` permission |
+| GET | `/api/course-categories/{id}/` | Get category detail | Authenticated |
+| PATCH | `/api/course-categories/{id}/` | Update category | Staff or `course.change_coursecategory` permission |
+| DELETE | `/api/course-categories/{id}/` | Delete category | Staff or `course.delete_coursecategory` permission |
+
+**Fields:** `id`, `name`, `description`, `is_active`, `branch`, `created_by`, `created_at`, `updated_at`
+
+**Query params:** `search` (name, description), `name` (icontains), `is_active`, `ordering` (id, name), `page`, `page_size`.
+
+**POST example:**
+```json
+{
+    "name": "Marketing",
+    "description": "Digital marketing & SEO courses"
+}
+```
+
+When creating/updating a course, attach categories with the `categories` field (array of category IDs). The response also includes a read-only `category_names` array.
+
+**POST `/api/courses/` with categories:**
+```json
+{
+    "course_type": "course",
+    "name": "Digital Marketing",
+    "full_amount": "25000.00",
+    "categories": [1, 2]
+}
+```
+
+---
+
+## External Intake Course Matching
+
+When external leads (public intake or OrbitChat) submit a course name as plain text, the backend resolves it to a real `Course` via `apps.course.matching.match_or_create_course`:
+
+1. **Match against the public catalog** — fetches all courses from `PUBLIC_COURSE_API_URL` (`https://base.skillshikshya.com/api/course/`, ~74 courses). Compares normalized tokens (stopwords removed). On a match, the course is created/updated in the CRM **with the price from the public API** and its categories attached.
+2. **Fallback to the local CRM table** — if the public API is unavailable, matches against the local `courses` table.
+3. **Auto-create** — if nothing matches, a new `Course` is created with the raw name and amount `0.00`.
+
+**Notes:**
+- `course_type` and `full_amount` are now optional on `Course` (can be `null`) so placeholder courses can be created without a fee.
+- Auto-created/imported courses should be reviewed by staff (set the real `full_amount` and `course_type`) before being enrolled.
+- The public catalog is cached in-process for a short period to avoid refetching on every lead.

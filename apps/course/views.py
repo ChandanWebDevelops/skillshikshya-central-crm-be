@@ -4,12 +4,35 @@ from rest_framework.permissions import IsAuthenticated
 
 from django_filters.rest_framework import DjangoFilterBackend
 
-from apps.course.models import Course, Batch, CourseBatch
-from apps.course.filters import CourseFilter, BatchFilter, CourseBatchFilter
-from apps.course.serializers import CourseSerializer, BatchSerializer, CourseBatchSerializer
+from apps.course.models import Course, Batch, CourseBatch, CourseCategory
+from apps.course.filters import CourseFilter, BatchFilter, CourseBatchFilter, CourseCategoryFilter
+from apps.course.serializers import (
+    CourseSerializer, BatchSerializer, CourseBatchSerializer, CourseCategorySerializer,
+)
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
 from apps.global_config.filters import BranchFilterBackend
+
+
+class CourseCategoryViewSet(viewsets.ModelViewSet):
+    queryset = CourseCategory.objects.all()
+    serializer_class = CourseCategorySerializer
+    pagination_class = CustomPagination
+    filterset_class = CourseCategoryFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
+    search_fields = ['name', 'description']
+    ordering_fields = ['id', 'name']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsStaffOrHasPermission]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [p() for p in permission_classes]
 
 
 class CourseViewSet(viewsets.ModelViewSet):

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from apps.course.models import Course, Batch, CourseBatch
+from apps.course.models import Course, Batch, CourseBatch, CourseCategory
 
 
 class CourseAdmin(admin.ModelAdmin):
@@ -20,6 +20,13 @@ class CourseBatchAdmin(admin.ModelAdmin):
     search_fields = ['coursebatch_id', 'name']
 
 
+class CourseCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name']
+
+
 admin.site.register(Course, CourseAdmin)
 admin.site.register(Batch, BatchAdmin)
 admin.site.register(CourseBatch, CourseBatchAdmin)
+admin.site.register(CourseCategory, CourseCategoryAdmin)

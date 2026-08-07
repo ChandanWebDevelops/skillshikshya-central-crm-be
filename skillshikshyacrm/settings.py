@@ -192,6 +192,9 @@ ORBITCHAT_API_URL = os.environ.get('ORBITCHAT_API_URL', 'https://base.orbitchat.
 ORBITCHAT_EMAIL = os.environ.get('ORBITCHAT_EMAIL', '')
 ORBITCHAT_PASSWORD = os.environ.get('ORBITCHAT_PASSWORD', '')
 
+# Public Skill Shikshya course catalog
+PUBLIC_COURSE_API_URL = os.environ.get('PUBLIC_COURSE_API_URL', 'https://base.skillshikshya.com/api/course/')
+
 PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
 
 # R2 (Cloudflare) Object Storage

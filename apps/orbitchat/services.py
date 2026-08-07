@@ -1,6 +1,6 @@
 import logging
 
-from apps.course.models import Course
+from apps.course.matching import match_or_create_course
 from apps.lead.models import Lead, LeadSource, LeadType, LeadCourseInterest
 
 logger = logging.getLogger(__name__)
@@ -65,10 +65,10 @@ def create_lead_from_orbitchat_contact(contact):
 
     notes = contact.get('notes')
     if notes:
-        course = Course.objects.filter(name__iexact=notes.strip()).first()
+        course, _ = match_or_create_course(notes.strip())
         LeadCourseInterest.objects.create(
             lead=lead,
-            course=course if course else None,
+            course=course,
             course_name=notes.strip() if not course else None,
             is_primary=True,
             interest_level='high',
