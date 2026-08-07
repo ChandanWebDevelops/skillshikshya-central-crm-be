@@ -378,7 +378,10 @@ class Enrollment(models.Model):
         null=True, blank=True, related_name='enrollments',
     )
     course = models.ForeignKey('course.Course', on_delete=models.CASCADE, related_name='enrollments')
-    batch = models.CharField(max_length=255, null=True, blank=True)
+    batch = models.ForeignKey(
+        'course.CourseBatch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='enrollments',
+    )
     enrollment_date = models.DateField()
     status = models.CharField(
         max_length=15, choices=Status.choices, default=Status.PENDING,

@@ -83,7 +83,8 @@ Flat enrollments register across all leads. Includes computed money fields.
     "student_name": "Rahul Sharma",
     "course": 2,
     "course_name": "Python Advanced",
-    "batch": "PY-2026-01",
+    "batch": 2,
+    "batch_name": "PY-2026-001",
     "status": "active",
     "enrollment_date": "2026-07-20",
     "listed_fee": "50000.00",
@@ -105,7 +106,7 @@ Flat enrollments register across all leads. Includes computed money fields.
 | `course` | int | Filter by course ID |
 | `status` | string | Filter by status |
 | `status__in` | string | Filter by multiple statuses |
-| `batch` | string | Filter by batch name |
+| `batch` | int | Filter by course batch ID |
 | `branch_id` | int | Filter by branch |
 | `enrollment_date__gte` | date | Enrolled after |
 | `enrollment_date__lte` | date | Enrolled before |

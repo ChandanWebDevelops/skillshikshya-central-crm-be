@@ -85,6 +85,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     lead_name = serializers.CharField(source='lead.full_name', read_only=True)
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    batch_name = serializers.CharField(source='batch.name', read_only=True)
     total_paid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     is_full_paid = serializers.BooleanField(read_only=True)
@@ -185,7 +186,7 @@ class LeadSerializer(serializers.ModelSerializer):
                 'is_enrolled': True,
                 'latest_status': enrollment.status,
                 'course': enrollment.course.name,
-                'batch': enrollment.batch,
+                'batch': enrollment.batch.coursebatch_id if enrollment.batch else None,
             }
         return {'is_enrolled': False, 'latest_status': None, 'course': None, 'batch': None}
 
@@ -251,6 +252,7 @@ class GlobalEnrollmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     course_name = serializers.CharField(source='course.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
+    batch_name = serializers.CharField(source='batch.name', read_only=True)
     total_paid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     is_full_paid = serializers.BooleanField(read_only=True)
@@ -261,7 +263,7 @@ class GlobalEnrollmentSerializer(serializers.ModelSerializer):
             'id', 'lead', 'lead_name',
             'student', 'student_name',
             'course', 'course_name',
-            'batch', 'status', 'enrollment_date',
+            'batch', 'batch_name', 'status', 'enrollment_date',
             'listed_fee', 'agreed_amount',
             'total_paid', 'remaining_amount', 'is_full_paid',
             'branch', 'branch_name',

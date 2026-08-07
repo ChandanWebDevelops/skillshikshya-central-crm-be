@@ -37,7 +37,8 @@ All CRUD endpoints are nested under a specific lead.
 | `course_name` | string (read-only) | Course display name |
 | `student` | int (FK, nullable) | Linked student profile ID |
 | `student_name` | string (read-only) | Student display name |
-| `batch` | string | Batch/group name |
+| `batch` | int (FK, nullable) | CourseBatch ID — see `/api/course-batches/` |
+| `batch_name` | string (read-only) | CourseBatch display name |
 | `enrollment_date` | date | Date of enrollment |
 | `status` | string | See options below |
 | `listed_fee` | decimal | Base/catalog fee |
@@ -63,7 +64,7 @@ All CRUD endpoints are nested under a specific lead.
 ```json
 {
     "course": 1,
-    "batch": "PY-2026-01",
+    "batch": 2,
     "enrollment_date": "2026-07-21",
     "status": "active",
     "listed_fee": "50000.00",
@@ -88,7 +89,8 @@ All CRUD endpoints are nested under a specific lead.
     "is_full_paid": false,
     "course": 1,
     "student": null,
-    "batch": "PY-2026-01",
+    "batch": 2,
+    "batch_name": "PY-2026-001",
     "enrollment_date": "2026-07-21",
     "status": "active",
     "listed_fee": "50000.00",
