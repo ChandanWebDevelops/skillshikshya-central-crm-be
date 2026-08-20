@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/', include('apps.course.urls')),
     path('api/', include('apps.branch.urls')),
     path('api/', include('apps.lead.urls')),
+    path('api/', include('apps.leadreport.urls')),
     path('api/', include('apps.student.urls')),
     path('api/upload/', upload_file, name='upload_file'),
     path('api/public/lead-intake/', lead_intake, name='lead_intake'),

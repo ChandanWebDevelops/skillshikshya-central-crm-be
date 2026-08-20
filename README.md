@@ -137,6 +137,7 @@ crm-skillshikshya-backend/
 │   ├── branch/            # Branch/location management
 │   ├── course/            # Course management
 │   ├── lead/              # Lead management (source, campaign, status, calls, activities, followups)
+│   ├── leadreport/        # Reports & analytics (overview, trends, revenue, conversion, counselor performance)
 │   ├── student/           # Student profiles (no login)
 │   ├── global_config/     # Shared pagination, permissions, file upload
 │   └── app_documents/     # API documentation
@@ -223,6 +224,20 @@ Base URL: `http://localhost:8188`
 | `/api/students/export_csv/` | GET | Export to CSV |
 | `/api/students/{id}/documents/` | GET/POST | Student documents |
 
+### Reports
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/reports/overview/` | GET | Dashboard summary snapshot |
+| `/api/reports/leads-by-status/` , `/api/reports/leads-by-source/` | GET | Breakdowns |
+| `/api/reports/leads-by-type/` , `/api/reports/leads-by-branch/` | GET | Breakdowns |
+| `/api/reports/leads-by-campaign/` , `/api/reports/leads-by-counselor/` | GET | Breakdowns |
+| `/api/reports/lead-trend/` | GET | Leads / conversions / revenue over time |
+| `/api/reports/revenue/` | GET | Collected & outstanding revenue |
+| `/api/reports/enrollments/` | GET | Enrollments by course/status + fees |
+| `/api/reports/conversion/` | GET | Lead funnel + conversion rates |
+| `/api/reports/counselor-performance/` | GET | Per-counselor metrics |
+
 ### File Upload
 
 | Endpoint | Method | Description |
@@ -246,6 +261,7 @@ Base URL: `http://localhost:8188`
 | `apps/app_documents/branch_app_apis_guide.md` | Branches |
 | `apps/app_documents/lead_app_apis_guide.md` | Leads (config, child records, filters, CSV) |
 | `apps/app_documents/student_app_apis_guide.md` | Students (profiles, documents, CSV) |
+| `apps/app_documents/leadreport_app_apis_guide.md` | Reports & analytics (overview, trends, revenue, conversion) |
 | `apps/app_documents/upload_api_guide.md` | File upload to R2 |
 
 ---

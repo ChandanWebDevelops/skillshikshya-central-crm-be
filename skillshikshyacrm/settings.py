@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'apps.course',
     'apps.global_config',
     'apps.lead',
+    'apps.leadreport',
     'apps.orbitchat',
     'apps.student',
 ]
