@@ -326,15 +326,22 @@ A contact is **skipped** if an existing lead already has the same `custom_data.o
 ### Manual run
 
 ```bash
-# Full sync (all contacts)
+# Sync contacts from the last 2 days (default window)
 docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task())"
 
+# Sync a specific date range
+docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task(start_date='2026-08-07', end_date='2026-08-07'))"
+
 # Limited sync (first N contacts only — useful for testing)
-docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task(limit=5))"
+docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task(check_limit=5))"
 
 # Or via Celery (async, requires worker running):
-docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task.delay(limit=5))"
+docker compose exec web python -c "from apps.orbitchat.tasks import poll_orbitchat_leads_task; print(poll_orbitchat_leads_task.delay(check_limit=5, page=1, page_size=50))"
 ```
+
+**Pagination control:** `page_size` maps to the backend's `limit` param (clamped to 20–200); `page` sets the starting page. The client still auto-paginates across pages unless a `page` is given, and it stops early when `check_limit` or `total` is reached.
+
+**Response shape note:** The OrbitChat contacts API returns `{status, message, data: {contacts, total, page, limit}}`. The client follows pagination automatically (up to 200 per page) and supports the `start_date`/`end_date` query params. When no date range is given, the task defaults to the last 2 days so it doesn't re-poll the full catalog (which can be 15k+ contacts).
 
 ---
 

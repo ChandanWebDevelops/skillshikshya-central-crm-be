@@ -103,29 +103,39 @@ def _upsert_from_public(item, requested_name, full_amount):
 
 def match_or_create_course(raw_name, full_amount=None):
     """
-    Resolve a plain-text inbound course name to a Course.
+    Resolve a plain-text inbound course name to a Course without duplicating.
 
     Strategy:
-      1. Match against the public SkillShikshya catalog by normalized tokens.
-         On a hit, upsert the Course using the public amount (or 0.00) and
-         attach its categories.
-      2. If the public API is unavailable, fall back to matching against the
-         local CRM course table.
-      3. If still nothing matches, create a new Course with amount 0.00.
+      1. Always reuse an existing Course with the exact same name.
+      2. Match against the public SkillShikshya catalog by normalized tokens.
+         On a hit, get-or-create the Course using the public amount (or 0.00)
+         and attach its categories.
+      3. Otherwise get-or-create a new Course with amount 0.00.
     """
     name = (raw_name or '').strip()
     if not name:
         return None, False
 
+    # 1. Exact-name dedup: reuse an existing course if present.
+    existing = Course.objects.filter(name__iexact=name).first()
+    if existing:
+        return existing, False
+
     query_tokens = _normalize(name)
 
-    # 1. Public catalog match (preferred)
+    # 2. Public catalog match (preferred)
     public = _fetch_public_courses()
     if public is not None:
         best = None
         best_score = 0.0
         for item in public:
-            title = item.get('title') or ''
+            title = (item.get('title') or '').strip()
+            if not title:
+                continue
+            if title.lower() == name.lower():
+                best = item
+                best_score = 1.0
+                break
             candidate_tokens = _normalize(title)
             score = _match_score(query_tokens, candidate_tokens)
             if score > best_score:
@@ -134,18 +144,9 @@ def match_or_create_course(raw_name, full_amount=None):
         if best and best_score >= MATCH_THRESHOLD:
             return _upsert_from_public(best, name, full_amount)
 
-    # 2. Fallback: local CRM course table
-    local_best = None
-    local_score = 0.0
-    for course in Course.objects.all():
-        candidate_tokens = _normalize(course.name)
-        score = _match_score(query_tokens, candidate_tokens)
-        if score > local_score:
-            local_score = score
-            local_best = course
-    if local_best and local_score >= MATCH_THRESHOLD:
-        return local_best, False
-
-    # 3. Create a new unmatched course (amount 0.00)
-    course = Course.objects.create(name=name)
-    return course, True
+    # 3. Not in API: get-or-create with amount 0.00 (no duplicates).
+    course, created = Course.objects.get_or_create(
+        name=name,
+        defaults={'full_amount': '0.00'},
+    )
+    return course, created
