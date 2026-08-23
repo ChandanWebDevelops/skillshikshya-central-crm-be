@@ -12,6 +12,43 @@ Flat read-only lists across all leads are available at:
 
 See [Global List Endpoints Guide](lead_app_global_list_api_guide.md) for details.
 
+## Branch Scoping
+
+All list endpoints support `?branch_id=X`. **Staff/superusers** can pass it to filter; non-staff users are automatically scoped to their own branch. See [Lead App Overview](lead_app_overview.md#branch-scoping) for the full rules.
+
+```
+GET /api/leads/?branch_id=2
+GET /api/enrollments/?branch_id=2
+GET /api/leads/5/enrollments/?branch_id=2
+```
+
+## Enrollment Lifecycle
+
+Enrollment `status` is a plain string — the API does not enforce transitions, but the intended workflow is:
+
+```
+pending ──► confirmed ──► active ──► completed
+   │                         
+   ├──► cancelled            
+                              
+active ──► dropped_out        
+active ──► transferred        
+```
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Created, awaiting confirmation/down payment |
+| `confirmed` | Confirmed by counselor (e.g., first payment received) |
+| `active` | Student attending classes |
+| `completed` | Course finished |
+| `cancelled` | Cancelled before/at start |
+| `dropped_out` | Student quit mid-course |
+| `transferred` | Moved to another branch/batch |
+
+> **Note:** Creating an enrollment does **not** automatically flip the lead's conversion state or create a student record. Those are separate manual steps:
+> - Set lead status via `PATCH /api/leads/{id}/` (conversion flags `is_converted`/`converted_at` are system-managed/read-only).
+> - Create the student profile via `POST /api/students/`, then optionally link it back by setting `student` on the enrollment.
+
 ## Enrollments
 
 ### Endpoints
@@ -46,12 +83,13 @@ All CRUD endpoints are nested under a specific lead.
 | `additional_discount` | decimal | Additional discount amount |
 | `agreed_amount` | decimal | Net fee after discounts |
 | `remarks` | text | Notes |
+| `branch` | int (FK, nullable) | Branch owning this enrollment |
 | `total_paid` | decimal (read-only) | Sum of successful payments |
 | `remaining_amount` | decimal (read-only) | `agreed_amount - total_paid` |
 | `is_full_paid` | bool (read-only) | `remaining_amount <= 0` |
 | `created_by` | int (FK, read-only) | |
 | `created_by_name` | string (read-only) | |
-| `created_at` | datetime (read-only) | |
+| `updated_by` | int (FK, read-only) | |
 | `updated_at` | datetime (read-only) | |
 
 **`status` options:** `pending`, `confirmed`, `active`, `completed`, `cancelled`, `dropped_out`, `transferred`
@@ -103,6 +141,47 @@ All CRUD endpoints are nested under a specific lead.
 }
 ```
 
+### PATCH `/api/leads/{lead_id}/enrollments/{id}/`
+
+Partial update — send only the fields being changed. Read-only fields are ignored if sent.
+
+**Request:**
+```json
+{
+    "status": "confirmed",
+    "agreed_amount": "42000.00"
+}
+```
+
+**Response `200 OK`:** same shape as the POST response above (with updated values).
+
+### Validation Errors — `400 Bad Request`
+
+Required fields on create: `course`, `enrollment_date`, `listed_fee`, `agreed_amount`. Decimal fields must be strings or numbers; dates use `YYYY-MM-DD`, datetimes use ISO 8601.
+
+```json
+{
+    "course": ["This field is required."],
+    "agreed_amount": ["A valid number is required."]
+}
+```
+
+Invalid enum value:
+```json
+{
+    "status": ["\"finished\" is not a valid choice."]
+}
+```
+
+Non-existent FK:
+```json
+{
+    "course": ["Invalid pk \"999\" - object does not exist."]
+}
+```
+
+Permission failures return `403 Forbidden` with `{"detail": ...}`; unknown IDs return `404 Not Found`.
+
 ### GET `/api/leads/{lead_id}/enrollments/` — List
 
 **Query params:**
@@ -145,13 +224,16 @@ A flat read-only list across all enrollments/leads is available at `GET /api/pay
 | `transaction_reference` | string | Bank ref, esewa txn, etc. |
 | `status` | string | `pending`, `successful`, `failed`, `refunded`, `voided` |
 | `notes` | text | |
-| `created_by` | int (FK, read-only) | |
-| `created_by_name` | string (read-only) | |
+| `branch` | int (FK, nullable, read-only) | Set to the recording user's branch context |
+| `received_by` | int (FK, read-only) | Auto-set to the logged-in user |
+| `received_by_name` | string (read-only) | |
 | `created_at` | datetime (read-only) | |
 
 > Only `status: "successful"` payments count toward `total_paid` on the enrollment.
 
 ### POST `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/`
+
+Required fields: `amount`, `payment_date`. `received_by` and `enrollment` are auto-set (logged-in user / URL).
 
 **Request:**
 ```json
@@ -164,6 +246,33 @@ A flat read-only list across all enrollments/leads is available at `GET /api/pay
     "notes": "First installment"
 }
 ```
+
+**Response `201 Created`:**
+```json
+{
+    "id": 7,
+    "received_by_name": "Sita Rai",
+    "amount": "20000.00",
+    "payment_date": "2026-07-21T12:00:00Z",
+    "payment_method": "esewa",
+    "status": "successful",
+    "transaction_reference": "ESEWA-12345",
+    "notes": "First installment",
+    "enrollment": 1,
+    "received_by": 2,
+    "branch": 1,
+    "created_at": "2026-07-21T12:05:00Z"
+}
+```
+
+**Validation error — `400 Bad Request`:**
+```json
+{
+    "payment_date": ["This field is required."],
+    "status": ["\"paid\" is not a valid choice."]
+}
+```
+Recording a successful payment immediately reflects in the parent enrollment's computed `total_paid`, `remaining_amount`, and `is_full_paid`.
 
 ### GET `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/` — List
 
