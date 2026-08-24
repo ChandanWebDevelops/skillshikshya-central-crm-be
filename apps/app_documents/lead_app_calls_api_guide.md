@@ -21,7 +21,7 @@ The `lead` field is auto-set from the URL. `created_by` is auto-set to the reque
 
 Creating a call **deducts minutes from the requesting user's balance**:
 
-- Minutes charged = `ceil(duration_seconds / 60)`, minimum 1 minute per call.
+- Minutes charged = `duration_seconds // 60` (completed minutes only — e.g. 9m30s = 9 minutes), minimum 1 minute per call.
 - If the balance is lower than the required minutes, the call is **rejected** with:
   ```json
   { "detail": "Insufficient call minutes (required 2, available 0)." }

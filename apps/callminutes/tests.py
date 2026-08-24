@@ -58,14 +58,24 @@ class CallDeductionTests(CallMinutesBase):
     def test_call_deducts_minutes(self):
         response = self._post_call()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['minutes_used'], 2)
-        self.assertEqual(response.data['remaining_minutes'], 8)
+        self.assertEqual(response.data['minutes_used'], 1)
+        self.assertEqual(response.data['remaining_minutes'], 9)
         self.counselor.refresh_from_db()
-        self.assertEqual(self.counselor.call_minutes_balance, 8)
+        self.assertEqual(self.counselor.call_minutes_balance, 9)
         txn = CallMinutesTransaction.objects.get(call=response.data['id'])
-        self.assertEqual(txn.amount, -2)
+        self.assertEqual(txn.amount, -1)
         self.assertEqual(txn.type, 'deduction')
-        self.assertEqual(txn.balance_after, 8)
+        self.assertEqual(txn.balance_after, 9)
+
+    def test_partial_minute_floored_not_ceiled(self):
+        # 9 min 30 sec = 570s -> charges 9 minutes, not 10
+        self.counselor.call_minutes_balance = 100
+        self.counselor.save()
+        self.call_payload['duration_seconds'] = 570
+        response = self._post_call()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['minutes_used'], 9)
+        self.assertEqual(response.data['remaining_minutes'], 91)
 
     def test_minimum_one_minute_charged(self):
         self.call_payload['duration_seconds'] = 0
@@ -106,7 +116,7 @@ class CallDeductionTests(CallMinutesBase):
         call = LeadCall.objects.get(pk=call_id)
         self.assertEqual(call.duration_seconds, 90)
         self.counselor.refresh_from_db()
-        self.assertEqual(self.counselor.call_minutes_balance, 8)
+        self.assertEqual(self.counselor.call_minutes_balance, 9)
 
 
 class TopUpTests(CallMinutesBase):

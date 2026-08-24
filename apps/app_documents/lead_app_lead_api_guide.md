@@ -52,8 +52,7 @@
 | `status_color` | string (read-only) | Status hex color |
 | `assigned_counselor` | int (FK) | User ID of assigned counselor |
 | `assigned_counselor_name` | string (read-only) | Counselor's display name |
-| `primary_course` | int (FK) | Primary course ID — see `/api/courses/` |
-| `primary_course_name` | string (read-only) | Course display name |
+| `primary_course` | object \| int | **Nested on read:** `{"id": …, "name": …, "price": "30000.00"}` (`price` = course full_amount, `null` if unset). **On write:** accepts the bare id (`14`) or `{"id": 14}`. See `/api/courses/` |
 | `lead_score` | int (read-only) | Computed score 0–100 |
 | `expected_revenue` | decimal | Expected revenue amount |
 | `last_contact_at` | datetime | Auto-updated on call/activity creation |
@@ -112,7 +111,7 @@ Total clamped to 0–100. New leads start at 0; score updates on the next `PATCH
     "campaign": 1,
     "priority": 1,
     "status": 1,
-    "primary_course": 1,
+    "primary_course": {"id": 1},   # or just: "primary_course": 1,
     "branch": 1,
     "assigned_counselor": 1,
     "notes": "Interested in full stack course",
@@ -273,8 +272,7 @@ Full response includes `call_count`, `next_followup` object, `enrollment_summary
     "status_color": "#2563eb",
     "assigned_counselor": 1,
     "assigned_counselor_name": "Admin",
-    "primary_course": 1,
-    "primary_course_name": "Python Advanced",
+    "primary_course": {"id": 1, "name": "Python Advanced", "price": "50000.00"},
     "lead_score": 75,
     "expected_revenue": "50000.00",
     "last_contact_at": "2026-07-21T10:00:00Z",

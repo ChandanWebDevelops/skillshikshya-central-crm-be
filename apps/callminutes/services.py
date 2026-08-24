@@ -1,5 +1,3 @@
-import math
-
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
@@ -15,7 +13,8 @@ def minutes_for_duration(duration_seconds):
         seconds = int(duration_seconds or 0)
     except (TypeError, ValueError):
         seconds = 0
-    return max(1, math.ceil(seconds / 60))
+    # Charge completed minutes only: 9m30s = 9 minutes. Minimum 1 per call.
+    return max(1, seconds // 60)
 
 
 def charge_minutes_for_call(user, duration_seconds, create_call):

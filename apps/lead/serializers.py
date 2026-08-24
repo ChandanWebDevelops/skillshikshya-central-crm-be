@@ -1,9 +1,32 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from apps.course.models import Course
 from apps.lead.models import (
     LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
     LeadTag, LeadType, Lead, LeadCourseInterest, Enrollment, Payment,
     LeadCall, LeadActivity, FollowUp, LeadDocument, Notification,
 )
+
+
+class PrimaryCourseField(serializers.Field):
+    """Nested {id, name, price} on read; accepts an int pk or {id} on write."""
+
+    def to_representation(self, value):
+        if value is None:
+            return None
+        return {
+            'id': value.id,
+            'name': value.name,
+            'price': str(value.full_amount) if value.full_amount is not None else None,
+        }
+
+    def to_internal_value(self, data):
+        course_id = data.get('id') if isinstance(data, dict) else data
+        try:
+            return Course.objects.get(pk=course_id)
+        except (Course.DoesNotExist, TypeError, ValueError):
+            raise ValidationError(f'Invalid pk "{course_id}" - course does not exist.')
 
 
 class LeadSourceSerializer(serializers.ModelSerializer):
@@ -124,7 +147,7 @@ class LeadListSerializer(serializers.ModelSerializer):
     campaign_name = serializers.CharField(source='campaign.name', read_only=True)
     assigned_counselor_name = serializers.CharField(source='assigned_counselor.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
-    primary_course_name = serializers.CharField(source='primary_course.name', read_only=True)
+    primary_course = PrimaryCourseField(required=False, allow_null=True)
     province_name = serializers.CharField(source='province.name', read_only=True)
     city_name = serializers.CharField(source='city.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
@@ -145,7 +168,7 @@ class LeadSerializer(serializers.ModelSerializer):
     campaign_name = serializers.CharField(source='campaign.name', read_only=True)
     assigned_counselor_name = serializers.CharField(source='assigned_counselor.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
-    primary_course_name = serializers.CharField(source='primary_course.name', read_only=True)
+    primary_course = PrimaryCourseField(required=False, allow_null=True)
     province_name = serializers.CharField(source='province.name', read_only=True)
     city_name = serializers.CharField(source='city.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
