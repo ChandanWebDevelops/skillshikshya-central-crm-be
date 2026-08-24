@@ -26,6 +26,20 @@ The Student app manages student profiles. Students do **not** have login account
 
 ---
 
+### Lead Conversion (automatic — do not send in payload)
+
+Creating a student **with a linked `lead`** automatically converts that lead:
+
+- `lead.is_converted` → `true`, `lead.converted_at` → now (set once, idempotent)
+- Unclaimed enrollments from the same lead are attached to the new student
+- A course-fee invoice is generated per un-invoiced enrollment (see [Invoices Guide](invoice_app_apis_guide.md))
+- Creating another student from an already-converted lead returns:
+  ```json
+  { "lead": ["This lead has already been converted to a student."] }
+  ```
+
+The `is_converted` / `converted_at` flags on leads are **system-managed** — never send them in any payload.
+
 ### POST `/api/students/` — Create Student
 
 `student_id` is auto-generated — do not send it.

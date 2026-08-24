@@ -1,6 +1,7 @@
 import csv
 
 from django.http import HttpResponse
+from django.utils import timezone
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -60,6 +61,15 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from apps.invoices.services import create_invoice
+        from rest_framework.exceptions import ValidationError
+
+        lead = serializer.validated_data.get('lead')
+        if lead and (
+            Student.objects.filter(lead=lead).exists() or lead.is_converted
+        ):
+            raise ValidationError({
+                'lead': 'This lead has already been converted to a student.'
+            })
 
         student = serializer.save(created_by=self.request.user)
 
@@ -81,6 +91,11 @@ class StudentViewSet(viewsets.ModelViewSet):
                     amount=enrollment.agreed_amount,
                     created_by=self.request.user,
                 )
+
+        if student.lead_id and not student.lead.is_converted:
+            student.lead.is_converted = True
+            student.lead.converted_at = timezone.now()
+            student.lead.save(update_fields=['is_converted', 'converted_at', 'lead_score'])
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
