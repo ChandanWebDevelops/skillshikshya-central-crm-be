@@ -439,13 +439,24 @@ class PaymentViewSet(viewsets.ModelViewSet):
             received_by=self.request.user,
         )
         if instance.status == 'successful':
-            from apps.invoices.services import create_invoice
+            self._generate_receipt(instance)
 
+    def perform_update(self, serializer):
+        previous_status = serializer.instance.status
+        instance = serializer.save()
+        if instance.status == 'successful' and previous_status != 'successful':
+            self._generate_receipt(instance)
+
+    def _generate_receipt(self, payment):
+        from apps.invoices.models import Invoice
+        from apps.invoices.services import create_invoice
+
+        if not payment.invoices.exists():
             create_invoice(
-                enrollment=instance.enrollment,
+                enrollment=payment.enrollment,
                 invoice_type='payment',
-                amount=instance.amount,
-                payment=instance,
+                amount=payment.amount,
+                payment=payment,
                 created_by=self.request.user,
             )
 

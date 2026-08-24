@@ -104,6 +104,37 @@ class PaymentInvoiceTests(InvoiceTestBase):
         self._pay('5000', pay_status='pending')
         self.assertEqual(Invoice.objects.count(), 0)
 
+    def test_correcting_pending_to_successful_generates_receipt_once(self):
+        response = self._pay('5000', pay_status='pending')
+        payment_id = response.data['id']
+        self.assertEqual(Invoice.objects.count(), 0)
+
+        url = (
+            f'/api/leads/{self.lead.id}/enrollments/{self.enrollment.id}'
+            f'/payments/{payment_id}/'
+        )
+        first = self.client.patch(url, {'status': 'successful'}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(Invoice.objects.filter(type='payment').count(), 1)
+        receipt = Invoice.objects.get(type='payment')
+        self.assertEqual(receipt.payment_id, payment_id)
+
+        # further edits must not duplicate the receipt
+        second = self.client.patch(url, {'notes': 'corrected reference'}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(Invoice.objects.filter(type='payment').count(), 1)
+
+    def test_editing_amount_of_successful_payment_keeps_single_receipt(self):
+        response = self._pay('14000')
+        payment_id = response.data['id']
+        url = (
+            f'/api/leads/{self.lead.id}/enrollments/{self.enrollment.id}'
+            f'/payments/{payment_id}/'
+        )
+        patched = self.client.patch(url, {'amount': '15000.00'}, format='json')
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        self.assertEqual(Invoice.objects.count(), 1)
+
 
 class InvoiceEndpointTests(InvoiceTestBase):
     def test_list_invoices(self):

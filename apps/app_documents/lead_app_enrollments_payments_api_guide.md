@@ -210,7 +210,27 @@ A flat read-only list across all enrollments/leads is available at `GET /api/pay
 | GET | `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/` | List payments (paginated) | Authenticated |
 | POST | `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/` | Record a payment | Staff or `lead.add_payment` permission |
 | GET | `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/{id}/` | Get payment detail | Authenticated |
+| PATCH/PUT | `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/{id}/` | Correct a payment | Staff or `lead.change_payment` permission |
 | DELETE | `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/{id}/` | Delete payment | Staff or `lead.delete_payment` permission |
+
+### PATCH `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/{id}/`
+
+Partial update for corrections (wrong amount, method, reference, status…). Editable fields: `amount`, `payment_date`, `payment_method`, `transaction_reference`, `status`, `notes`. Read-only: `enrollment`, `received_by`, `created_at`.
+
+**Request:**
+```json
+{
+    "amount": "21000.00",
+    "status": "successful"
+}
+```
+
+**Response `200 OK`:** same shape as the POST response.
+
+> **Invoice side-effects:**
+> - A payment created with `status: "successful"` gets a PDF receipt emailed automatically.
+> - If a payment was recorded as `pending` and later **corrected to `successful` via PATCH**, the receipt is generated at that moment (once — no duplicates on further edits).
+> - Editing a *successful* payment's amount does NOT regenerate its already-issued receipt. Prefer correcting before marking successful; otherwise issue a manual adjustment and inform the student.
 
 ### Model Fields
 

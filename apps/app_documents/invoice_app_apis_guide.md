@@ -115,7 +115,7 @@ CC addresses are also editable in Django Admin (**Invoices → Invoice Email Con
 
 ## Behavior Notes & Limitations
 
-1. **Creation-time triggers only** — flipping a pending payment to `successful` via PATCH does *not* generate a receipt; use resend or create payments with final status.
+1. **Creation & status-correction triggers** — receipts generate when a payment is created `successful`, **or** when a pending payment is later corrected to `successful` via PATCH (once only). Editing the amount of an already-successful payment does not regenerate its issued receipt.
 2. Students are auto-linked to unclaimed enrollments from their lead at creation (sets `Enrollment.student` when it was null).
 3. Duplicate protection: an enrollment gets at most one `enrollment`-type fee invoice.
 4. Emails require working SMTP + Redis/Celery; check worker logs (`docker compose logs -f celery_worker`) if invoices show `sent_at = null`.
