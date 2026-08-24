@@ -9,12 +9,37 @@ All endpoints are nested under a specific lead.
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
 | GET | `/api/leads/{lead_id}/calls/` | List calls (paginated) | Authenticated |
-| POST | `/api/leads/{lead_id}/calls/` | Add a call | Staff or `lead.add_leadcall` permission |
+| POST | `/api/leads/{lead_id}/calls/` | Add a call (consumes call minutes) | Staff or `lead.add_leadcall` permission |
 | GET | `/api/leads/{lead_id}/calls/{id}/` | Get call detail | Authenticated |
-| PATCH | `/api/leads/{lead_id}/calls/{id}/` | Update call | Staff or `lead.change_leadcall` permission |
-| DELETE | `/api/leads/{lead_id}/calls/{id}/` | Delete call | Staff or `lead.delete_leadcall` permission |
+| PATCH | `/api/leads/{lead_id}/calls/{id}/` | Update call notes/outcome etc. | Staff or `lead.change_leadcall` permission |
+
+> **DELETE is disabled** — call records are permanent and cannot be deleted via the API (`405 Method Not Allowed`), so the call-minutes ledger stays trustworthy.
 
 The `lead` field is auto-set from the URL. `created_by` is auto-set to the requesting user.
+
+## Call Minutes Deduction
+
+Creating a call **deducts minutes from the requesting user's balance**:
+
+- Minutes charged = `ceil(duration_seconds / 60)`, minimum 1 minute per call.
+- If the balance is lower than the required minutes, the call is **rejected** with:
+  ```json
+  { "detail": "Insufficient call minutes (required 2, available 0)." }
+  ```
+- On success, the response includes two extra fields: `minutes_used` and `remaining_minutes`.
+- Every deduction writes a row in the immutable ledger (see [Call Minutes](account_app_apis_guide.md#call-minutes)).
+- `duration_seconds` and `caller` are **locked after creation** — PATCH requests silently ignore changes to them.
+
+**Example POST response (201):**
+```json
+{
+    "id": 21,
+    "duration_seconds": 90,
+    "minutes_used": 2,
+    "remaining_minutes": 8,
+    "...": "…other standard fields…"
+}
+```
 
 ---
 

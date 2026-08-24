@@ -200,6 +200,13 @@ class LeadCallSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['lead', 'created_by', 'created_at']
 
+    def update(self, instance, validated_data):
+        # duration_seconds and caller are locked after creation so the
+        # call-minutes ledger cannot be gamed.
+        validated_data.pop('duration_seconds', None)
+        validated_data.pop('caller', None)
+        return super().update(instance, validated_data)
+
 
 class LeadActivitySerializer(serializers.ModelSerializer):
     performed_by_name = serializers.CharField(source='performed_by.name', read_only=True)

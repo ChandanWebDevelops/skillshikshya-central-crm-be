@@ -9,6 +9,7 @@ from apps.lead.models import (
     Enrollment, FollowUp, Lead, LeadActivity, LeadCall,
     LeadCourseInterest, Payment,
 )
+from apps.callminutes.models import CallMinutesTransaction
 from apps.student.models import Student
 
 User = get_user_model()
@@ -531,6 +532,15 @@ def counselor_performance_report(request):
             collected = collected.filter(payment_date__date__lte=end_date)
         collected_total = collected.aggregate(total=Coalesce(Sum('amount'), Decimal('0')))['total']
 
+        minutes_used = CallMinutesTransaction.objects.filter(user=counselor, type='deduction')
+        if start_date:
+            minutes_used = minutes_used.filter(created_at__date__gte=start_date)
+        if end_date:
+            minutes_used = minutes_used.filter(created_at__date__lte=end_date)
+        minutes_used_total = -(
+            minutes_used.aggregate(total=Coalesce(Sum('amount'), 0))['total'] or 0
+        )
+
         results.append({
             'counselor': {
                 'id': counselor.id,
@@ -553,12 +563,15 @@ def counselor_performance_report(request):
             ).count() if lead_ids else 0,
             'enrollments': Enrollment.objects.filter(lead__assigned_counselor=counselor).count(),
             'revenue_collected': str(collected_total),
+            'call_minutes_used': minutes_used_total,
+            'minutes_remaining': counselor.call_minutes_balance,
         })
 
     sort_key = _query_param(request, 'sort_by', 'leads_assigned')
     allowed = {
         'leads_assigned', 'converted', 'conversion_rate', 'calls',
         'activities', 'enrollments', 'revenue_collected',
+        'call_minutes_used', 'minutes_remaining',
     }
     if sort_key not in allowed:
         sort_key = 'leads_assigned'

@@ -175,6 +175,9 @@ Base URL: `http://localhost:8188`
 | `/api/users/` | GET | List users (paginated, searchable) |
 | `/api/users/export_csv/` | GET | Export users to CSV |
 | `/api/users/{id}/` | GET/PATCH/DELETE | Retrieve/Update/Delete |
+| `/api/users/{id}/call-minutes/add/` | POST | Top up call minutes (admin) |
+| `/api/users/{id}/call-minutes/transactions/` | GET | Call minutes ledger (admin) |
+| `/api/users/me/call-minutes/` | GET | Own balance + recent transactions |
 
 ### Courses
 

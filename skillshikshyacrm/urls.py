@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/auth/forgot-password/', ForgotPasswordView.as_view(), name='auth_forgot_password'),
     path('api/auth/reset-password/', ResetPasswordView.as_view(), name='auth_reset_password'),
     path('api/', include('apps.account.urls')),
+    path('api/', include('apps.callminutes.urls')),
     path('api/', include('apps.course.urls')),
     path('api/', include('apps.branch.urls')),
     path('api/', include('apps.lead.urls')),

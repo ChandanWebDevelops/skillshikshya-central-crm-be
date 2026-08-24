@@ -348,6 +348,78 @@ When `groups` is set, the user is assigned to those permission groups (replaces 
 
 ---
 
+## Call Minutes
+
+Each user has a `call_minutes_balance` (included in user list/detail responses, read-only). Logging a lead call deducts minutes automatically; admins top balances up manually. See [Calls Guide](lead_app_calls_api_guide.md#call-minutes-deduction) for the deduction side.
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| POST | `/api/users/{id}/call-minutes/add/` | Top up minutes | Admin (`is_staff`) only |
+| GET | `/api/users/{id}/call-minutes/transactions/` | Paginated ledger for a user | Admin (`is_staff`) only |
+| GET | `/api/users/me/call-minutes/` | Own balance + last 10 transactions | Authenticated |
+
+### POST `/api/users/{id}/call-minutes/add/`
+
+**Request:**
+```json
+{
+    "amount": 100,
+    "note": "August quota"
+}
+```
+`amount` must be a positive integer. The transaction is recorded as type `topup` with the acting admin as `created_by`.
+
+**Response `200 OK`:**
+```json
+{
+    "detail": "Added 100 call minutes to counselor@example.com.",
+    "user": { "id": 8, "email": "counselor@example.com" },
+    "balance": 160,
+    "transaction": {
+        "id": 12, "amount": 100, "type": "topup", "balance_after": 160,
+        "note": "August quota", "created_by_name": "Admin",
+        "created_at": "2026-08-23T12:00:00Z"
+    }
+}
+```
+
+### GET `/api/users/{id}/call-minutes/transactions/`
+
+Paginated ledger. Query params: `?type=topup|deduction|adjustment`, `created_at__gte`, `created_at__lte`, plus standard `page` / `page_size`.
+
+```json
+{
+  "count": 2,
+  "results": [
+    { "id": 11, "amount": -2, "type": "deduction", "balance_after": 60,
+      "call": 21, "note": "", "created_at": "2026-08-23T11:00:00Z" },
+    { "id": 12, "amount": 100, "type": "topup", "balance_after": 62,
+      "call": null, "note": "August quota", "created_at": "2026-08-23T10:00:00Z" }
+  ]
+}
+```
+
+### GET `/api/users/me/call-minutes/`
+
+```json
+{
+    "balance": 8,
+    "recent_transactions": [ "…last 10 transactions…" ]
+}
+```
+
+### Transaction types
+
+| Type | Meaning |
+|------|---------|
+| `topup` | Admin added minutes |
+| `deduction` | Minutes consumed by a call (negative amount) |
+| `adjustment` | Reserved for manual corrections (via Django admin) |
+
+> **Note:** Existing active users were seeded with **100 minutes** by migration when this feature shipped.
+
+---
+
 ## Group (Role) Endpoints
 
 | Method | Endpoint | Description | Access |

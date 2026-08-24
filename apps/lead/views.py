@@ -459,14 +459,37 @@ class LeadCallViewSet(viewsets.ModelViewSet):
         return LeadCall.objects.filter(lead_id=self.kwargs['lead_pk']).select_related('created_by')
 
     def perform_create(self, serializer):
-        instance = serializer.save(
-            lead_id=self.kwargs['lead_pk'],
-            created_by=self.request.user,
+        from apps.callminutes.services import charge_minutes_for_call
+
+        instance = charge_minutes_for_call(
+            user=self.request.user,
+            duration_seconds=serializer.validated_data.get('duration_seconds'),
+            create_call=lambda: serializer.save(
+                lead_id=self.kwargs['lead_pk'],
+                created_by=self.request.user,
+            ),
         )
         lead = instance.lead
         if lead.last_contact_at is None or instance.call_timestamp > lead.last_contact_at:
             lead.last_contact_at = instance.call_timestamp
         lead.save(update_fields=['lead_score', 'last_contact_at'])
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        data = dict(serializer.data)
+        instance = serializer.instance
+        data['minutes_used'] = getattr(instance, 'minutes_used', None)
+        data['remaining_minutes'] = getattr(instance, 'remaining_minutes', None)
+        headers = self.get_success_headers(data)
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Call records cannot be deleted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

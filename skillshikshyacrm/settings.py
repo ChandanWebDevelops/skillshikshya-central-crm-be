@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     # Project apps
     'apps.account',
     'apps.branch',
+    'apps.callminutes',
     'apps.course',
     'apps.global_config',
     'apps.lead',

@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
-        read_only_fields = ['is_staff', 'is_superuser', 'user_permissions', 'last_login', 'created_at', 'updated_at']
+        read_only_fields = ['is_staff', 'is_superuser', 'user_permissions', 'last_login', 'created_at', 'updated_at', 'call_minutes_balance']
 
     def get_user_permissions(self, obj):
         return sorted(obj.get_all_permissions())
