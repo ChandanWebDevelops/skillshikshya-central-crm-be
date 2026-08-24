@@ -434,10 +434,20 @@ class PaymentViewSet(viewsets.ModelViewSet):
         ).select_related('received_by')
 
     def perform_create(self, serializer):
-        serializer.save(
+        instance = serializer.save(
             enrollment_id=self.kwargs['enrollment_pk'],
             received_by=self.request.user,
         )
+        if instance.status == 'successful':
+            from apps.invoices.services import create_invoice
+
+            create_invoice(
+                enrollment=instance.enrollment,
+                invoice_type='payment',
+                amount=instance.amount,
+                payment=instance,
+                created_by=self.request.user,
+            )
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

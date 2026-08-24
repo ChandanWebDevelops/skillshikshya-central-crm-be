@@ -1,0 +1,31 @@
+from rest_framework import serializers
+
+from apps.invoices.models import Invoice, InvoiceEmailConfig
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    enrollment_id = serializers.IntegerField(source='enrollment.id', read_only=True)
+    payment_id = serializers.IntegerField(source='payment.id', read_only=True)
+    type_display = serializers.CharField(source='get_type_display', read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'id', 'invoice_number', 'type', 'type_display',
+            'enrollment', 'enrollment_id',
+            'student', 'student_name',
+            'payment', 'payment_id',
+            'course_name', 'amount',
+            'total_paid_so_far', 'remaining_balance',
+            'pdf_url', 'emailed_to', 'cc_emails', 'sent_at',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+class InvoiceEmailConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceEmailConfig
+        fields = ['cc_emails', 'subject_prefix', 'is_active', 'updated_at']
+        read_only_fields = ['updated_at']

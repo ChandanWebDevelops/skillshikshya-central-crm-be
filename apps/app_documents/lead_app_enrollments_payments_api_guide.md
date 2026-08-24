@@ -231,6 +231,8 @@ A flat read-only list across all enrollments/leads is available at `GET /api/pay
 
 > Only `status: "successful"` payments count toward `total_paid` on the enrollment.
 
+> **Invoice:** recording a payment with `status: "successful"` automatically generates a PDF receipt (archived to R2) and emails it to the student with configured CCs. See [Invoices Guide](invoice_app_apis_guide.md).
+
 ### POST `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/`
 
 Required fields: `amount`, `payment_date`. `received_by` and `enrollment` are auto-set (logged-in user / URL).

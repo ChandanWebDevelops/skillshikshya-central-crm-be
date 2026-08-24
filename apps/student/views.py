@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.student.models import Student, StudentDocument, Attendance
+from apps.lead.models import Enrollment
 from apps.student.serializers import (
     StudentSerializer, StudentListSerializer,
     StudentDocumentSerializer, AttendanceSerializer,
@@ -58,7 +59,28 @@ class StudentViewSet(viewsets.ModelViewSet):
         return Response(profile)
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        from apps.invoices.services import create_invoice
+
+        student = serializer.save(created_by=self.request.user)
+
+        enrollments = student.lead.enrollments.exclude(
+            status='cancelled',
+        ).select_related('course') if student.lead_id else Enrollment.objects.none()
+
+        for enrollment in enrollments:
+            # Claim enrollments from the same lead that have no student yet.
+            if enrollment.student_id is None:
+                enrollment.student = student
+                enrollment.save(update_fields=['student'])
+
+            has_fee_invoice = enrollment.invoices.filter(type='enrollment').exists()
+            if not has_fee_invoice:
+                create_invoice(
+                    enrollment=enrollment,
+                    invoice_type='enrollment',
+                    amount=enrollment.agreed_amount,
+                    created_by=self.request.user,
+                )
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)

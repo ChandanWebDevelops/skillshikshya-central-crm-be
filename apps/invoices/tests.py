@@ -1,0 +1,149 @@
+from datetime import date
+from unittest import mock
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.test import override_settings
+
+from apps.branch.models import Branch
+from apps.course.models import Course
+from apps.invoices.models import Invoice, InvoiceEmailConfig
+from apps.lead.models import Enrollment, Lead, Payment
+
+User = get_user_model()
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=False)
+class InvoiceTestBase(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email='admin@test.com', name='Admin', password='pass', is_staff=True,
+            call_minutes_balance=100,
+        )
+        self.client.force_authenticate(self.admin)
+        self.branch = Branch.objects.create(name='Kathmandu', code='KTM')
+        self.course = Course.objects.create(name='Python Advanced')
+        self.lead = Lead.objects.create(
+            full_name='Rahul Sharma', phone='9800000002',
+            email='rahul@example.com',
+        )
+        self.enrollment = Enrollment.objects.create(
+            lead=self.lead,
+            course=self.course,
+            enrollment_date=date.today(),
+            listed_fee=30000,
+            agreed_amount=28000,
+            status='active',
+        )
+        InvoiceEmailConfig.load()
+
+
+class StudentCreationInvoiceTests(InvoiceTestBase):
+    def test_student_creation_generates_enrollment_invoice(self):
+        response = self.client.post('/api/students/', {
+            'full_name': 'Rahul Sharma',
+            'phone': '9800000002',
+            'lead': self.lead.id,
+            'branch': self.branch.id,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        invoice = Invoice.objects.get(type='enrollment')
+        self.assertEqual(invoice.enrollment_id, self.enrollment.id)
+        self.assertEqual(str(invoice.amount), '28000.00')
+        self.assertEqual(invoice.course_name, 'Python Advanced')
+        self.assertTrue(invoice.invoice_number.startswith('INV-'))
+        self.assertEqual(invoice.student_id, response.data['id'])
+
+    def test_no_enrollment_means_no_invoice(self):
+        Lead.objects.create(full_name='No Course', phone='111')
+        response = self.client.post('/api/students/', {
+            'full_name': 'Standalone Student',
+            'phone': '222',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Invoice.objects.count(), 0)
+
+    def test_no_duplicate_invoice_on_second_student(self):
+        self.client.post('/api/students/', {
+            'full_name': 'First', 'phone': '333', 'lead': self.lead.id,
+        }, format='json')
+        # a second student from the same lead must not duplicate fee invoice
+        self.client.post('/api/students/', {
+            'full_name': 'Second', 'phone': '444', 'lead': self.lead.id,
+        }, format='json')
+        self.assertEqual(
+            Invoice.objects.filter(type='enrollment').count(), 1,
+        )
+
+
+class PaymentInvoiceTests(InvoiceTestBase):
+    def _pay(self, amount, pay_status='successful'):
+        return self.client.post(
+            f'/api/leads/{self.lead.id}/enrollments/{self.enrollment.id}/payments/',
+            {
+                'amount': amount,
+                'payment_date': timezone.now().isoformat(),
+                'payment_method': 'cash',
+                'status': pay_status,
+            },
+            format='json',
+        )
+
+    def test_successful_payment_creates_receipt(self):
+        response = self._pay('14000')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        invoice = Invoice.objects.get(type='payment')
+        self.assertEqual(invoice.payment.amount, 14000)
+        self.assertEqual(str(invoice.total_paid_so_far), '14000.00')
+        self.assertEqual(str(invoice.remaining_balance), '14000.00')
+
+    def test_pending_payment_creates_nothing(self):
+        self._pay('5000', pay_status='pending')
+        self.assertEqual(Invoice.objects.count(), 0)
+
+
+class InvoiceEndpointTests(InvoiceTestBase):
+    def test_list_invoices(self):
+        Invoice.objects.create(
+            enrollment=self.enrollment, type='enrollment',
+            course_name='X', amount=28000,
+        )
+        response = self.client.get('/api/invoices/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+    def test_resend_requires_staff(self):
+        invoice = Invoice.objects.create(
+            enrollment=self.enrollment, type='enrollment',
+            course_name='X', amount=28000,
+        )
+        counselor = User.objects.create_user(email='c@t.com', name='C', password='x')
+        self.client.force_authenticate(counselor)
+        response = self.client.post(f'/api/invoices/{invoice.id}/resend/')
+        self.assertIn(response.status_code, (403, 401))
+
+    @mock.patch('apps.invoices.views.send_invoice_email_task.delay')
+    def test_resend_queues_task(self, mock_delay):
+        invoice = Invoice.objects.create(
+            enrollment=self.enrollment, type='enrollment',
+            course_name='X', amount=28000,
+        )
+        response = self.client.post(f'/api/invoices/{invoice.id}/resend/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_delay.assert_called_once_with(invoice.id)
+
+    def test_email_config_get_put_staff_only(self):
+        response = self.client.put('/api/invoices/email-config/', {
+            'cc_emails': ['accounts@skill.com'],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        config = InvoiceEmailConfig.load()
+        self.assertEqual(config.cc_emails, ['accounts@skill.com'])
+
+        counselor = User.objects.create_user(email='c2@t.com', name='C2', password='x')
+        self.client.force_authenticate(counselor)
+        denied = self.client.get('/api/invoices/email-config/')
+        self.assertIn(denied.status_code, (403, 401))

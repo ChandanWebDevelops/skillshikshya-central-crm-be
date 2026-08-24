@@ -241,6 +241,15 @@ Base URL: `http://localhost:8188`
 | `/api/reports/conversion/` | GET | Lead funnel + conversion rates |
 | `/api/reports/counselor-performance/` | GET | Per-counselor metrics |
 
+### Invoices
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/invoices/` | GET | List invoices (auto-generated, PDF archived to R2) |
+| `/api/students/{id}/invoices/` | GET | Student invoice history |
+| `/api/invoices/{id}/resend/` | POST | Re-send invoice email (admin) |
+| `/api/invoices/email-config/` | GET/PUT | Global CC email config (admin) |
+
 ### File Upload
 
 | Endpoint | Method | Description |
@@ -265,6 +274,7 @@ Base URL: `http://localhost:8188`
 | `apps/app_documents/lead_app_apis_guide.md` | Leads (config, child records, filters, CSV) |
 | `apps/app_documents/student_app_apis_guide.md` | Students (profiles, documents, CSV) |
 | `apps/app_documents/leadreport_app_apis_guide.md` | Reports & analytics (overview, trends, revenue, conversion) |
+| `apps/app_documents/invoice_app_apis_guide.md` | Invoices (auto-generation, PDF/R2, email config) |
 | `apps/app_documents/upload_api_guide.md` | File upload to R2 |
 
 ---

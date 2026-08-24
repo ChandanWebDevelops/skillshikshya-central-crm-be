@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/', include('apps.callminutes.urls')),
     path('api/', include('apps.course.urls')),
     path('api/', include('apps.branch.urls')),
+    path('api/', include('apps.invoices.urls')),
     path('api/', include('apps.lead.urls')),
     path('api/', include('apps.leadreport.urls')),
     path('api/', include('apps.student.urls')),

@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'apps.callminutes',
     'apps.course',
     'apps.global_config',
+    'apps.invoices',
     'apps.lead',
     'apps.leadreport',
     'apps.orbitchat',
