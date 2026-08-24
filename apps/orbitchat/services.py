@@ -73,6 +73,9 @@ def create_lead_from_orbitchat_contact(contact):
             is_primary=True,
             interest_level='high',
         )
+        if course and lead.primary_course_id is None:
+            lead.primary_course = course
+            lead.save(update_fields=['primary_course', 'lead_score'])
 
     logger.info('Created lead %s from OrbitChat contact %s', lead.reference_number, contact.get('id'))
     return lead

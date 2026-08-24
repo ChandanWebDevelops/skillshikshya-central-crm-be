@@ -74,6 +74,9 @@ def lead_intake(request):
             is_primary=(i == 0),
             interest_level='high',
         )
+        if i == 0 and course and lead.primary_course_id is None:
+            lead.primary_course = course
+            lead.save(update_fields=['primary_course', 'lead_score'])
 
     return Response(
         {'reference_number': lead.reference_number, 'id': lead.id},

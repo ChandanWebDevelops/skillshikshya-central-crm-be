@@ -291,6 +291,7 @@ OrbitChat AI leads are polled automatically by a daily Celery Beat task (`poll-o
 | `phone` | `phone` |
 | `email` | `email` |
 | `notes` | `notes` (also used to guess a course interest) |
+| — | `primary_course` = matched/created course from notes; also stored as `course_interests[is_primary=True]` |
 | `created_at` | `custom_data.created_at` |
 | `id` | `custom_data.orbitchat_id` |
 | `channel_type` | `source` (mapped below) |
