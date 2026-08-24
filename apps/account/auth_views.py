@@ -187,8 +187,10 @@ class ForgotPasswordView(APIView):
             reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
             send_reset_link_email_task.delay(email, reset_link)
 
-            if settings.DEBUG:
-                response_data['reset_link'] = reset_link
+            # Reset link is never returned in the API response (security).
+            # Uncomment for local debugging only.
+            # if settings.DEBUG:
+            #     response_data['reset_link'] = reset_link
 
         return Response(response_data, status=status.HTTP_200_OK)
 

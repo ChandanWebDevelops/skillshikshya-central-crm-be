@@ -286,7 +286,7 @@ Base URL: `http://localhost:8188`
 3. **Reset** — `POST /api/auth/reset-password/` with `{"uid": "...", "token": "...", "new_password": "...", "confirm_new_password": "..."}`
 4. **Confirmation email** — Sent asynchronously via Celery
 
-> In DEBUG mode, the reset link is also returned in the API response for testing.
+> The reset link is **only sent via email** and never returned in the API response (prevents link leakage). The email is sent only if the email exists in the system; otherwise the same generic response is returned.
 
 ---
 
