@@ -18,7 +18,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'payment', 'payment_id',
             'course_name', 'amount',
             'total_paid_so_far', 'remaining_balance',
-            'pdf_url', 'emailed_to', 'cc_emails', 'sent_at',
+            'emailed_to', 'cc_emails', 'sent_at',
             'created_at',
         ]
         read_only_fields = fields

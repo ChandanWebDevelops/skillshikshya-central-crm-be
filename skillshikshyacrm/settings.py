@@ -28,9 +28,13 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.lead.tasks.send_followup_reminders_task',
         'schedule': 300,  # every 5 minutes
     },
-    # 'poll-orbitchat-leads-daily': {
+    # OrbitChat lead sync — uncomment to enable automatic polling.
+    # The task uses an incremental watermark (last successful sync) so each
+    # run only processes new contacts. Manual runs with start_date/end_date
+    # do not move the watermark.
+    # 'poll-orbitchat-leads-hourly': {
     #     'task': 'apps.orbitchat.tasks.poll_orbitchat_leads_task',
-    #     'schedule': crontab(hour=0, minute=0),  # daily at midnight UTC
+    #     'schedule': crontab(minute=0),  # every hour on the hour
     # },
 }
 
@@ -197,6 +201,13 @@ ORBITCHAT_PASSWORD = os.environ.get('ORBITCHAT_PASSWORD', '')
 
 # Public Skill Shikshya course catalog
 PUBLIC_COURSE_API_URL = os.environ.get('PUBLIC_COURSE_API_URL', 'https://base.skillshikshya.com/api/course/')
+
+# Invoice emails
+
+INVOICE_LOGO_URL = os.environ.get(
+    'INVOICE_LOGO_URL',
+    'https://pub-3a712783614d44db9c5b349676a4cff8.r2.dev/uploads/converted_image.png',
+)
 
 PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
 

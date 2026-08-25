@@ -228,8 +228,8 @@ Partial update for corrections (wrong amount, method, reference, status…). Edi
 **Response `200 OK`:** same shape as the POST response.
 
 > **Invoice side-effects:**
-> - A payment created with `status: "successful"` gets a PDF receipt emailed automatically.
-> - If a payment was recorded as `pending` and later **corrected to `successful` via PATCH**, the receipt is generated at that moment (once — no duplicates on further edits).
+> - A payment created with `status: "successful"` gets an invoice emailed automatically.
+> - If a payment was recorded as `pending` and later **corrected to `successful` via PATCH**, the invoice is generated at that moment (once — no duplicates on further edits).
 > - Editing a *successful* payment's amount does NOT regenerate its already-issued receipt. Prefer correcting before marking successful; otherwise issue a manual adjustment and inform the student.
 
 ### Model Fields
@@ -251,7 +251,7 @@ Partial update for corrections (wrong amount, method, reference, status…). Edi
 
 > Only `status: "successful"` payments count toward `total_paid` on the enrollment.
 
-> **Invoice:** recording a payment with `status: "successful"` automatically generates a PDF receipt (archived to R2) and emails it to the student with configured CCs. See [Invoices Guide](invoice_app_apis_guide.md).
+> **Invoice:** recording a payment with `status: "successful"` automatically generates an invoice and emails it to the student with configured CCs. See [Invoices Guide](invoice_app_apis_guide.md).
 
 ### POST `/api/leads/{lead_id}/enrollments/{enrollment_id}/payments/`
 

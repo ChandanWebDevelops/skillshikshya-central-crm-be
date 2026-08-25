@@ -275,7 +275,18 @@ This endpoint allows unauthenticated lead creation from external websites, landi
 
 ## OrbitChat Lead Sync
 
-OrbitChat AI leads are polled automatically by a daily Celery Beat task (`poll-orbitchat-leads-daily`, midnight UTC) and created as leads in the CRM.
+OrbitChat leads are synced by `poll_orbitchat_leads_task`. Automatic hourly polling is available via the commented Celery Beat entry `poll-orbitchat-leads-hourly` in `settings.py` — uncomment it and restart celery-beat to enable.
+
+### Incremental watermark
+
+The task tracks its last successful sync in the `orbitchat_sync_states` table (`SyncState`):
+
+| Run type | Window used | Watermark |
+|----------|-------------|-----------|
+| Automatic (no args) | from `last_sync_at.date()` → today. First-ever run falls back to the last 2 days | **Advances** to now on success |
+| Manual (`start_date`/`end_date`) | exactly as given (backfills) | **Never moves** |
+
+In steady state with hourly polling this means each run fetches **today's contacts only**; the first run after midnight automatically reaches back to cover anything missed before midnight. A failed run leaves the watermark untouched, so the next run naturally retries that window.
 
 ### How it works
 

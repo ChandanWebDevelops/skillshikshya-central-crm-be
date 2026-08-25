@@ -12,12 +12,30 @@ def poll_orbitchat_leads_task(
     check_limit=None, start_date=None, end_date=None,
     page=None, page_size=None,
 ):
+    """
+    Pull contacts from OrbitChat and create CRM leads.
+
+    Window resolution:
+      - explicit start_date/end_date args win (manual backfills)
+      - otherwise: from the last successful sync watermark -> today
+      - fallback (no watermark yet): last 2 days
+
+    The watermark only advances on automatic-window runs that finish
+    successfully, so a failed run is naturally retried by the next one.
+    """
     from apps.orbitchat.client import OrbitChatClient
+    from apps.orbitchat.models import SyncState
     from apps.orbitchat.services import create_lead_from_orbitchat_contact
 
-    if start_date is None or end_date is None:
+    manual_window = start_date is not None or end_date is not None
+    state = SyncState.get()
+
+    if not manual_window:
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=1)
+        if state.last_sync_at:
+            start_date = state.last_sync_at.date()
+        else:
+            start_date = end_date - timedelta(days=1)
 
     client = OrbitChatClient()
     token = client.login()
@@ -37,5 +55,13 @@ def poll_orbitchat_leads_task(
         else:
             skipped += 1
 
+    if not manual_window:
+        state.last_sync_at = timezone.now()
+        state.save(update_fields=['last_sync_at'])
+
     logger.info('OrbitChat poll done: %s created, %s skipped', created, skipped)
-    return {'created': created, 'skipped': skipped, 'total': len(contacts)}
+    return {
+        'created': created, 'skipped': skipped, 'total': len(contacts),
+        'window': {'start_date': str(start_date), 'end_date': str(end_date)},
+        'watermark_updated': not manual_window,
+    }

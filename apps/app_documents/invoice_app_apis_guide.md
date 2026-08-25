@@ -9,9 +9,9 @@ Invoices are generated **automatically** and emailed to students (with CC suppor
 | **Student created** from a lead that has active enrollments | `enrollment` invoice per enrollment (course fee = `agreed_amount`) |
 | **Successful payment recorded** (`POST .../payments/`) | `payment` receipt (amount paid + running total + remaining) |
 
-Each invoice is rendered to **PDF** (xhtml2pdf), archived to **R2** under `invoices/`, attached to a styled HTML email, and sent via Celery. Failed/pending payments and standalone students without enrollments generate nothing.
+Each invoice is sent as a **styled HTML email** (with the Skill Shikshya logo) via Celery. Failed/pending payments and standalone students without enrollments generate nothing.
 
-> The email goes to `student.email`, falling back to `lead.email`. If neither exists, the invoice is still generated/archived but not emailed (a warning is logged). PDF/R2/email failures never block invoice creation.
+> The email goes to `student.email`, falling back to `lead.email`. If neither exists, the invoice is still generated but not emailed (a warning is logged). Email failures never block invoice creation.
 
 **Base URL:** `http://localhost:8188`
 
@@ -23,7 +23,7 @@ Each invoice is rendered to **PDF** (xhtml2pdf), archived to **R2** under `invoi
 |--------|----------|-------------|--------|
 | GET | `/api/invoices/` | Flat list, paginated + filters | Authenticated |
 | GET | `/api/students/{student_id}/invoices/` | Per-student invoice history | Authenticated |
-| POST | `/api/invoices/{id}/resend/` | Re-send email (with PDF) | Admin only |
+| POST | `/api/invoices/{id}/resend/` | Re-send email | Admin only |
 | GET/PUT | `/api/invoices/email-config/` | Read/update global email config (CC list) | Admin only |
 
 ### GET `/api/invoices/`
@@ -47,7 +47,6 @@ Each invoice is rendered to **PDF** (xhtml2pdf), archived to **R2** under `invoi
       "amount": "23000.00",
       "total_paid_so_far": "43000.00",
       "remaining_balance": "0.00",
-      "pdf_url": "https://…/invoices/INV-2026-000002.pdf",
       "emailed_to": "ram@example.com",
       "cc_emails": ["accounts@skillshikshya.com"],
       "sent_at": "2026-08-23T12:05:11Z",
@@ -108,7 +107,6 @@ CC addresses are also editable in Django Admin (**Invoices → Invoice Email Con
 | `amount` | decimal | This document's amount (fee or payment) |
 | `total_paid_so_far` | decimal (read-only) | Successful payments at generation time |
 | `remaining_balance` | decimal (read-only) | `agreed_amount - total_paid_so_far` (floor 0) |
-| `pdf_url` / `pdf_key` | read-only | R2 archive location of the PDF |
 | `emailed_to` / `cc_emails` / `sent_at` | read-only | Populated when the email is sent |
 
 ---
@@ -119,7 +117,7 @@ CC addresses are also editable in Django Admin (**Invoices → Invoice Email Con
 2. Students are auto-linked to unclaimed enrollments from their lead at creation (sets `Enrollment.student` when it was null).
 3. Duplicate protection: an enrollment gets at most one `enrollment`-type fee invoice.
 4. Emails require working SMTP + Redis/Celery; check worker logs (`docker compose logs -f celery_worker`) if invoices show `sent_at = null`.
-5. R2 credentials must be configured for PDF archiving; otherwise invoices are still valid but have no `pdf_url` and emails go out without attachments.
+5. The email header logo is configurable via the `INVOICE_LOGO_URL` env var (defaults to the Skill Shikshya logo).
 
 ---
 

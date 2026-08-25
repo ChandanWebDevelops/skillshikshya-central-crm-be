@@ -26,8 +26,6 @@ class Invoice(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_paid_so_far = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    pdf_url = models.URLField(max_length=500, null=True, blank=True)
-    pdf_key = models.CharField(max_length=255, null=True, blank=True)
     emailed_to = models.EmailField(null=True, blank=True)
     cc_emails = models.JSONField(default=list, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import models
 from django.db.models import Sum, Count, Max
+from django.db.models.fields.json import KeyTextTransform
 
 
 class LearningMode(models.Model):
@@ -274,6 +275,15 @@ class Lead(models.Model):
     class Meta:
         db_table = 'leads'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['phone'], name='lead_phone_idx'),
+            models.Index(fields=['email'], name='lead_email_idx'),
+            models.Index(fields=['created_at'], name='lead_created_idx'),
+            models.Index(
+                KeyTextTransform('orbitchat_id', 'custom_data'),
+                name='lead_orbitchat_id_idx',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.reference_number} - {self.full_name} ({self.phone})'

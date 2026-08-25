@@ -1,11 +1,17 @@
+from datetime import timedelta
+from io import StringIO
+from unittest import mock
+
 from django.core.management import call_command
 from django.test import TestCase
-from io import StringIO
+from django.utils import timezone
 
 from apps.course.models import Course
 from apps.lead.intake import lead_intake  # noqa: F401  (import sanity)
 from apps.lead.models import Lead, LeadCourseInterest
+from apps.orbitchat.models import SyncState
 from apps.orbitchat.services import create_lead_from_orbitchat_contact
+from apps.orbitchat.tasks import poll_orbitchat_leads_task
 
 
 class OrbitchatPrimaryCourseTests(TestCase):
@@ -82,3 +88,79 @@ class BackfillCommandTests(TestCase):
 
         lead.refresh_from_db()
         self.assertEqual(lead.primary_course_id, keep.id)
+
+class WatermarkSyncTests(TestCase):
+    def _run_task(self, contacts, **kwargs):
+        with mock.patch(
+            'apps.orbitchat.client.OrbitChatClient.login', return_value='tok',
+        ), mock.patch(
+            'apps.orbitchat.client.OrbitChatClient.fetch_contacts',
+            return_value=contacts,
+        ) as mock_fetch:
+            result = poll_orbitchat_leads_task(**kwargs)
+        return result, mock_fetch
+
+    def test_first_run_uses_default_window_and_sets_watermark(self):
+        state = SyncState.get()
+        self.assertIsNone(state.last_sync_at)
+
+        result, fetch = self._run_task([])
+        kwargs = fetch.call_args.kwargs
+        self.assertEqual(
+            (kwargs['end_date'] - kwargs['start_date']).days, 1,
+        )
+        SyncState.get().refresh_from_db()
+        self.assertIsNotNone(SyncState.get().last_sync_at)
+        self.assertTrue(result['watermark_updated'])
+
+    def test_steady_state_fetches_today_only(self):
+        SyncState.get()  # create row
+        yesterday = timezone.now() - timedelta(hours=2)
+        SyncState.objects.update(last_sync_at=yesterday)
+
+        _, fetch = self._run_task([])
+        kwargs = fetch.call_args.kwargs
+        today = timezone.now().date()
+        self.assertEqual(kwargs['start_date'], today)
+        self.assertEqual(kwargs['end_date'], today)
+
+    def test_manual_window_does_not_move_watermark(self):
+        before = timezone.now() - timedelta(days=5)
+        state = SyncState.get()  # ensure the row exists
+        state.last_sync_at = before
+        state.save(update_fields=['last_sync_at'])
+
+        result, _ = self._run_task(
+            [], start_date='2026-08-01', end_date='2026-08-02',
+        )
+        SyncState.get().refresh_from_db()
+        self.assertEqual(SyncState.get().last_sync_at, before)
+        self.assertFalse(result['watermark_updated'])
+
+    def test_failed_run_keeps_watermark(self):
+        SyncState.get()
+        before = timezone.now() - timedelta(hours=3)
+        SyncState.objects.update(last_sync_at=before)
+
+        with mock.patch(
+            'apps.orbitchat.client.OrbitChatClient.login',
+            side_effect=Exception('api down'),
+        ):
+            with self.assertRaises(Exception):
+                poll_orbitchat_leads_task()
+
+        SyncState.get().refresh_from_db()
+        self.assertEqual(SyncState.get().last_sync_at, before)
+
+    def test_dedup_across_repeated_runs(self):
+        contact = {
+            'id': 'dup-1', 'name': 'Repeat Person', 'phone': None,
+            'channel_type': 'facebook', 'notes': '',
+        }
+        self._run_task([contact])
+        created_first = Lead.objects.count()
+
+        # second run re-fetches the same window; dedup must skip
+        result, _ = self._run_task([contact])
+        self.assertEqual(Lead.objects.count(), created_first)
+        self.assertEqual(result['skipped'], 1)
