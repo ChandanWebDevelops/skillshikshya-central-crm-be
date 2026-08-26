@@ -4,6 +4,7 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
+from rest_framework.test import APITestCase
 from django.utils import timezone
 
 from apps.course.models import Course
@@ -213,3 +214,55 @@ class SyncToggleTests(TestCase):
             [], start_date='2026-08-01', end_date='2026-08-02', force=True,
         )
         self.assertNotEqual(forced.get('status'), 'disabled')
+
+
+class SyncStateAPITests(APITestCase):
+    def _client(self, staff):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        User = get_user_model()
+        user = User.objects.create_user(
+            email=f'{"admin" if staff else "c"}@t.com', name='U',
+            password='x', is_staff=staff,
+        )
+        client = APIClient()
+        client.force_authenticate(user)
+        return client
+
+    def test_staff_can_get_state(self):
+        client = self._client(staff=True)
+        response = client.get('/api/orbitchat/sync-state/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['is_enabled'])
+        self.assertEqual(response.data['key'], 'orbitchat_leads')
+
+    def test_staff_can_toggle_enabled(self):
+        from apps.orbitchat.models import SyncState
+        client = self._client(staff=True)
+        response = client.patch(
+            '/api/orbitchat/sync-state/', {'is_enabled': True}, format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['is_enabled'])
+        self.assertTrue(SyncState.get().is_enabled)
+
+    def test_non_staff_denied(self):
+        client = self._client(staff=False)
+        get = client.get('/api/orbitchat/sync-state/')
+        patch = client.patch(
+            '/api/orbitchat/sync-state/', {'is_enabled': True}, format='json',
+        )
+        self.assertIn(get.status_code, (403, 401))
+        self.assertIn(patch.status_code, (403, 401))
+
+    def test_key_and_last_sync_read_only(self):
+        client = self._client(staff=True)
+        response = client.patch('/api/orbitchat/sync-state/', {
+            'key': 'hacked',
+            'last_sync_at': '2020-01-01T00:00:00Z',
+            'is_enabled': True,
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['key'], 'orbitchat_leads')
+        self.assertIsNone(response.data['last_sync_at'])
+

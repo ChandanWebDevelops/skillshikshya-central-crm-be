@@ -289,7 +289,27 @@ OrbitChat leads are synced hourly by the `poll-orbitchat-leads-hourly` Celery Be
 
 ### Enable / disable (no restart needed)
 
-Go to **Django Admin → Orbitchat → Sync states** and toggle **is_enabled**:
+Toggle via **API** (for frontend settings screens) or **Django Admin** (Orbitchat → Sync states):
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| GET | `/api/orbitchat/sync-state/` | Current sync status | Admin (`is_staff`) only |
+| PATCH | `/api/orbitchat/sync-state/` | Enable/disable the hourly sync | Admin (`is_staff`) only |
+
+**GET response:**
+```json
+{
+    "key": "orbitchat_leads",
+    "is_enabled": false,
+    "last_sync_at": "2026-08-26T05:48:53Z",
+    "updated_at": "2026-08-26T05:48:13Z"
+}
+```
+
+**PATCH request** — takes effect on the next hourly tick, no restart needed:
+```json
+{ "is_enabled": true }
+```
 
 - ✅ enabled — automatic runs proceed every hour
 - ⬜ disabled (default) — automatic runs are skipped immediately; watermark untouched
