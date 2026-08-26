@@ -21,13 +21,13 @@ The `lead` field is auto-set from the URL. `created_by` is auto-set to the reque
 
 Creating a call **deducts minutes from the requesting user's balance**:
 
-- Minutes charged = `duration_seconds // 60` (completed minutes only — e.g. 9m30s = 9 minutes), minimum 1 minute per call.
+- Minutes charged = the call's **exact `duration_seconds`** (no rounding). A 4m30s (270s) call deducts exactly 270 seconds; a 0-second call is recorded but deducts nothing.
 - If the balance is lower than the required minutes, the call is **rejected** with:
   ```json
-  { "detail": "Insufficient call minutes (required 2, available 0)." }
+  { "detail": "Insufficient call minutes (required 270 seconds, available 120 seconds)." }
   ```
-- On success, the response includes two extra fields: `minutes_used` and `remaining_minutes`.
-- Every deduction writes a row in the immutable ledger (see [Call Minutes](account_app_apis_guide.md#call-minutes)).
+- On success, the response includes: `seconds_used`, `remaining_seconds`, plus floored `minutes_used` / `remaining_minutes` for convenience.
+- Every deduction writes a row in the immutable ledger in **seconds** (see [Call Minutes](account_app_apis_guide.md#call-minutes)).
 - `duration_seconds` and `caller` are **locked after creation** — PATCH requests silently ignore changes to them.
 
 **Example POST response (201):**
@@ -35,8 +35,10 @@ Creating a call **deducts minutes from the requesting user's balance**:
 {
     "id": 21,
     "duration_seconds": 90,
-    "minutes_used": 2,
-    "remaining_minutes": 8,
+    "seconds_used": 270,
+    "remaining_seconds": 330,
+    "minutes_used": 4,
+    "remaining_minutes": 5,
     "...": "…other standard fields…"
 }
 ```

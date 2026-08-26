@@ -537,7 +537,7 @@ def counselor_performance_report(request):
             minutes_used = minutes_used.filter(created_at__date__gte=start_date)
         if end_date:
             minutes_used = minutes_used.filter(created_at__date__lte=end_date)
-        minutes_used_total = -(
+        seconds_used_total = -(
             minutes_used.aggregate(total=Coalesce(Sum('amount'), 0))['total'] or 0
         )
 
@@ -563,8 +563,10 @@ def counselor_performance_report(request):
             ).count() if lead_ids else 0,
             'enrollments': Enrollment.objects.filter(lead__assigned_counselor=counselor).count(),
             'revenue_collected': str(collected_total),
-            'call_minutes_used': minutes_used_total,
-            'minutes_remaining': counselor.call_minutes_balance,
+            'call_seconds_used': seconds_used_total,
+            'seconds_remaining': counselor.call_seconds_balance,
+            'call_minutes_used': round(seconds_used_total / 60, 1),
+            'minutes_remaining': round(counselor.call_seconds_balance / 60, 1),
         })
 
     sort_key = _query_param(request, 'sort_by', 'leads_assigned')

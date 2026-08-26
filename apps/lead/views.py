@@ -480,9 +480,9 @@ class LeadCallViewSet(viewsets.ModelViewSet):
         return LeadCall.objects.filter(lead_id=self.kwargs['lead_pk']).select_related('created_by')
 
     def perform_create(self, serializer):
-        from apps.callminutes.services import charge_minutes_for_call
+        from apps.callminutes.services import charge_for_call
 
-        instance = charge_minutes_for_call(
+        instance = charge_for_call(
             user=self.request.user,
             duration_seconds=serializer.validated_data.get('duration_seconds'),
             create_call=lambda: serializer.save(
@@ -501,8 +501,14 @@ class LeadCallViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         data = dict(serializer.data)
         instance = serializer.instance
-        data['minutes_used'] = getattr(instance, 'minutes_used', None)
-        data['remaining_minutes'] = getattr(instance, 'remaining_minutes', None)
+        seconds_used = getattr(instance, 'seconds_used', 0)
+        remaining_seconds = getattr(instance, 'remaining_seconds', None)
+        data['seconds_used'] = seconds_used
+        data['remaining_seconds'] = remaining_seconds
+        data['minutes_used'] = seconds_used // 60 if seconds_used is not None else None
+        data['remaining_minutes'] = (
+            remaining_seconds // 60 if remaining_seconds is not None else None
+        )
         headers = self.get_success_headers(data)
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 

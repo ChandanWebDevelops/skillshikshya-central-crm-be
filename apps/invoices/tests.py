@@ -20,7 +20,7 @@ class InvoiceTestBase(APITestCase):
     def setUp(self):
         self.admin = User.objects.create_user(
             email='admin@test.com', name='Admin', password='pass', is_staff=True,
-            call_minutes_balance=100,
+            call_seconds_balance=100 * 60,
         )
         self.client.force_authenticate(self.admin)
         self.branch = Branch.objects.create(name='Kathmandu', code='KTM')

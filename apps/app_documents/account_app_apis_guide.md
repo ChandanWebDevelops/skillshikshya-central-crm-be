@@ -350,7 +350,7 @@ When `groups` is set, the user is assigned to those permission groups (replaces 
 
 ## Call Minutes
 
-Each user has a `call_minutes_balance` (included in user list/detail responses, read-only). Logging a lead call deducts minutes automatically; admins top balances up manually. See [Calls Guide](lead_app_calls_api_guide.md#call-minutes-deduction) for the deduction side.
+Each user has a `call_seconds_balance` (included in user list/detail responses, read-only) — the balance is stored and deducted **in exact seconds**. Logging a lead call deducts the call's exact duration; admins top up in minutes (converted to seconds internally). See [Calls Guide](lead_app_calls_api_guide.md#call-minutes-deduction). See [Calls Guide](lead_app_calls_api_guide.md#call-minutes-deduction) for the deduction side.
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
@@ -374,9 +374,10 @@ Each user has a `call_minutes_balance` (included in user list/detail responses, 
 {
     "detail": "Added 100 call minutes to counselor@example.com.",
     "user": { "id": 8, "email": "counselor@example.com" },
-    "balance": 160,
+    "balance_minutes": 160,
+    "balance_seconds": 9600,
     "transaction": {
-        "id": 12, "amount": 100, "type": "topup", "balance_after": 160,
+        "id": 12, "amount": 6000, "type": "topup", "balance_after": 9600,
         "note": "August quota", "created_by_name": "Admin",
         "created_at": "2026-08-23T12:00:00Z"
     }
@@ -391,9 +392,9 @@ Paginated ledger. Query params: `?type=topup|deduction|adjustment`, `created_at_
 {
   "count": 2,
   "results": [
-    { "id": 11, "amount": -2, "type": "deduction", "balance_after": 60,
+    { "id": 11, "amount": -270, "type": "deduction", "balance_after": 3300,
       "call": 21, "note": "", "created_at": "2026-08-23T11:00:00Z" },
-    { "id": 12, "amount": 100, "type": "topup", "balance_after": 62,
+    { "id": 12, "amount": 6000, "type": "topup", "balance_after": 3570,
       "call": null, "note": "August quota", "created_at": "2026-08-23T10:00:00Z" }
   ]
 }
@@ -403,10 +404,14 @@ Paginated ledger. Query params: `?type=topup|deduction|adjustment`, `created_at_
 
 ```json
 {
-    "balance": 8,
+    "balance_seconds": 540,
+    "balance_minutes": 9,
+    "balance_display": "9:00",
     "recent_transactions": [ "…last 10 transactions…" ]
 }
 ```
+
+> **Units:** ledger `amount` / `balance_after` are in **seconds**. The top-up endpoint accepts **minutes** and converts (×60) internally. Existing balances were migrated ×60 when this change shipped.
 
 ### Transaction types
 

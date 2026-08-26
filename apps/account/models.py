@@ -31,7 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     daily_call_target_min = models.IntegerField(null=True, blank=True)
     monthly_enrollment_target = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    call_minutes_balance = models.IntegerField(default=0)
+    call_seconds_balance = models.IntegerField(default=0)
     designation = models.CharField(max_length=150, null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     shift_start = models.TimeField(null=True, blank=True)

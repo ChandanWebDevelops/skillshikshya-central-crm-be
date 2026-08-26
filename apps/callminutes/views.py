@@ -20,14 +20,15 @@ def add_call_minutes(request, user_id):
     note = request.data.get('note', '')
     target, txn = add_minutes(
         user_id=target.id,
-        amount=amount,
+        amount_minutes=amount,
         note=note,
         created_by=request.user,
     )
     return Response({
-        'detail': f'Added {txn.amount} call minutes to {target.email}.',
+        'detail': f'Added {txn.amount // 60} call minutes to {target.email}.',
         'user': {'id': target.id, 'email': target.email},
-        'balance': target.call_minutes_balance,
+        'balance_minutes': target.call_seconds_balance // 60,
+        'balance_seconds': target.call_seconds_balance,
         'transaction': CallMinutesTransactionSerializer(txn).data,
     }, status=status.HTTP_200_OK)
 
@@ -49,7 +50,10 @@ class CallMinutesTransactionListView(generics.ListAPIView):
 @permission_classes([IsAuthenticated])
 def my_call_minutes(request):
     recent = CallMinutesTransaction.objects.filter(user=request.user)[:10]
+    balance = request.user.call_seconds_balance
     return Response({
-        'balance': request.user.call_minutes_balance,
+        'balance_seconds': balance,
+        'balance_minutes': balance // 60,
+        'balance_display': f'{balance // 60}:{str(balance % 60).zfill(2)}',
         'recent_transactions': CallMinutesTransactionSerializer(recent, many=True).data,
     })
