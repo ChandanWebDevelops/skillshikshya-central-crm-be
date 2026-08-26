@@ -168,6 +168,21 @@ class TopUpTests(CallMinutesBase):
         self.assertEqual(txn.type, 'topup')
         self.assertEqual(txn.created_by, self.admin)
 
+    def test_transaction_serializes_minutes_alongside_seconds(self):
+        self.client.force_authenticate(self.admin)
+        self.client.post(
+            f'/api/users/{self.counselor.id}/call-minutes/add/',
+            {'amount': 50, 'note': 'quota'}, format='json',
+        )
+        response = self.client.get(
+            f'/api/users/{self.counselor.id}/call-minutes/transactions/'
+        )
+        row = response.data['results'][0]
+        self.assertEqual(row['amount'], 3000)
+        self.assertEqual(row['amount_minutes'], 50.0)
+        self.assertEqual(row['balance_after'], 3600)
+        self.assertEqual(row['balance_after_minutes'], 60.0)
+
     def test_non_staff_cannot_top_up(self):
         self.client.force_authenticate(self.counselor)
         response = self.client.post(

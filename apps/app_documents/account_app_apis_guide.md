@@ -392,9 +392,11 @@ Paginated ledger. Query params: `?type=topup|deduction|adjustment`, `created_at_
 {
   "count": 2,
   "results": [
-    { "id": 11, "amount": -270, "type": "deduction", "balance_after": 3300,
+    { "id": 11, "amount": -270, "amount_minutes": -4.5, "type": "deduction",
+      "balance_after": 3300, "balance_after_minutes": 55.0,
       "call": 21, "note": "", "created_at": "2026-08-23T11:00:00Z" },
-    { "id": 12, "amount": 6000, "type": "topup", "balance_after": 3570,
+    { "id": 12, "amount": 6000, "amount_minutes": 100.0, "type": "topup",
+      "balance_after": 3570, "balance_after_minutes": 59.5,
       "call": null, "note": "August quota", "created_at": "2026-08-23T10:00:00Z" }
   ]
 }
