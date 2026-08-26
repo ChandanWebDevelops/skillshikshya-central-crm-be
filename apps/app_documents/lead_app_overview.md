@@ -285,7 +285,24 @@ This endpoint allows unauthenticated lead creation from external websites, landi
 
 ## OrbitChat Lead Sync
 
-OrbitChat leads are synced by `poll_orbitchat_leads_task`. Automatic hourly polling is available via the commented Celery Beat entry `poll-orbitchat-leads-hourly` in `settings.py` — uncomment it and restart celery-beat to enable.
+OrbitChat leads are synced hourly by the `poll-orbitchat-leads-hourly` Celery Beat task (`minute=15` UTC == on-the-hour Nepal time).
+
+### Enable / disable (no restart needed)
+
+Go to **Django Admin → Orbitchat → Sync states** and toggle **is_enabled**:
+
+- ✅ enabled — automatic runs proceed every hour
+- ⬜ disabled (default) — automatic runs are skipped immediately; watermark untouched
+- Manual shell runs pass `force=True` to bypass the flag:
+  ```bash
+  docker compose exec web python -c "
+  import os, django
+  os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skillshikshyacrm.settings')
+  django.setup()
+  from apps.orbitchat.tasks import poll_orbitchat_leads_task
+  print(poll_orbitchat_leads_task(check_limit=5, force=True))
+  "
+  ```
 
 ### Incremental watermark
 

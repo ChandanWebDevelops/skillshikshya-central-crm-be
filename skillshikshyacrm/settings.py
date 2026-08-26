@@ -28,14 +28,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.lead.tasks.send_followup_reminders_task',
         'schedule': 300,  # every 5 minutes
     },
-    # OrbitChat lead sync — uncomment to enable automatic polling.
-    # The task uses an incremental watermark (last successful sync) so each
-    # run only processes new contacts. Manual runs with start_date/end_date
-    # do not move the watermark.
-    # 'poll-orbitchat-leads-hourly': {
-    #     'task': 'apps.orbitchat.tasks.poll_orbitchat_leads_task',
-    #     'schedule': crontab(minute=0),  # every hour on the hour
-    # },
+    # OrbitChat lead sync — runs hourly on NPT hour boundaries.
+    # minute=15 UTC == minute 0 Nepal time (UTC+5:45).
+    # Enable/disable via Django Admin -> Orbitchat -> Sync states -> is_enabled
+    # (no restart needed; automatic runs no-op while disabled).
+    'poll-orbitchat-leads-hourly': {
+        'task': 'apps.orbitchat.tasks.poll_orbitchat_leads_task',
+        'schedule': crontab(minute=15),  # UTC 07:15 == NPT 13:00
+    },
 }
 
 

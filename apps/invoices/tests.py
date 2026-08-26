@@ -178,3 +178,53 @@ class InvoiceEndpointTests(InvoiceTestBase):
         self.client.force_authenticate(counselor)
         denied = self.client.get('/api/invoices/email-config/')
         self.assertIn(denied.status_code, (403, 401))
+
+class InvoiceBranchScopingTests(InvoiceTestBase):
+    def test_branch_scoping_on_invoice_list(self):
+        from apps.invoices.models import Invoice as Inv
+        branch2 = Branch.objects.create(name='Pokhara', code='PKR')
+        inv1 = Inv.objects.create(
+            enrollment=self.enrollment, type='enrollment',
+            course_name='X', amount=28000, branch=self.branch,
+        )
+        enrollment2 = Enrollment.objects.create(
+            lead=Lead.objects.create(full_name='Other', phone='2'),
+            course=self.course, enrollment_date=date.today(),
+            listed_fee=100, agreed_amount=100, status='active',
+            branch=branch2,
+        )
+        Inv.objects.create(
+            enrollment=enrollment2, type='enrollment',
+            course_name='Y', amount=100, branch=branch2,
+        )
+
+        # staff sees all
+        response = self.client.get('/api/invoices/')
+        self.assertEqual(response.data['count'], 2)
+
+        # staff filtered by branch_id
+        filtered = self.client.get(f'/api/invoices/?branch_id={self.branch.id}')
+        self.assertEqual(filtered.data['count'], 1)
+        self.assertEqual(filtered.data['results'][0]['id'], inv1.id)
+
+        # non-staff locked to their own branch
+        counselor = User.objects.create_user(
+            email='br@t.com', name='BR', password='x', branch=self.branch,
+        )
+        self.client.force_authenticate(counselor)
+        scoped = self.client.get('/api/invoices/')
+        self.assertEqual(scoped.data['count'], 1)
+        self.assertEqual(scoped.data['results'][0]['branch'], self.branch.id)
+
+    def test_new_invoices_snapshot_enrollment_branch(self):
+        lead3 = Lead.objects.create(
+            full_name='Branchy', phone='3',
+        )
+        enr = Enrollment.objects.create(
+            lead=lead3, course=self.course, enrollment_date=date.today(),
+            listed_fee=10, agreed_amount=10, status='active',
+            branch=self.branch,
+        )
+        invoice, _ = __import__('apps.invoices.services', fromlist=['create_invoice']) \
+            .create_invoice(enrollment=enr, invoice_type='enrollment', amount=10)
+        self.assertEqual(invoice.branch_id, self.branch.id)

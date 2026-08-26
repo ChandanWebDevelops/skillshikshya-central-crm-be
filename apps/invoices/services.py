@@ -45,6 +45,7 @@ def create_invoice(enrollment, invoice_type, amount, payment=None, created_by=No
         amount=amount,
         total_paid_so_far=enrollment_total_paid,
         remaining_balance=remaining,
+        branch=enrollment.branch,
         created_by=created_by,
     )
 

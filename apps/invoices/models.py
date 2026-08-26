@@ -26,6 +26,10 @@ class Invoice(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_paid_so_far = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    branch = models.ForeignKey(
+        'branch.Branch', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='invoices',
+    )
     emailed_to = models.EmailField(null=True, blank=True)
     cc_emails = models.JSONField(default=list, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)

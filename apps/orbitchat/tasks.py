@@ -10,10 +10,13 @@ logger = logging.getLogger(__name__)
 @shared_task
 def poll_orbitchat_leads_task(
     check_limit=None, start_date=None, end_date=None,
-    page=None, page_size=None,
+    page=None, page_size=None, force=False,
 ):
     """
     Pull contacts from OrbitChat and create CRM leads.
+
+    Enable/disable: scheduled (automatic) runs are skipped while
+    SyncState.is_enabled is False. Manual runs pass force=True to bypass.
 
     Window resolution:
       - explicit start_date/end_date args win (manual backfills)
@@ -29,6 +32,10 @@ def poll_orbitchat_leads_task(
 
     manual_window = start_date is not None or end_date is not None
     state = SyncState.get()
+
+    if not force and not state.is_enabled:
+        logger.info('OrbitChat sync is disabled; skipping run.')
+        return {'created': 0, 'skipped': 0, 'total': 0, 'status': 'disabled'}
 
     if not manual_window:
         end_date = timezone.now().date()

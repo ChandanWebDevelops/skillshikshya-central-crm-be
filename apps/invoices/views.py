@@ -4,7 +4,9 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
+from apps.global_config.filters import BranchFilterBackend
 from apps.global_config.pagination import CustomPagination
 from apps.invoices.filters import InvoiceFilter
 from apps.invoices.models import Invoice, InvoiceEmailConfig
@@ -19,12 +21,13 @@ class InvoiceListAPIView(generics.ListAPIView):
     pagination_class = CustomPagination
     permission_classes = [IsAuthenticated]
     filterset_class = InvoiceFilter
+    filter_backends = [DjangoFilterBackend, BranchFilterBackend]
     ordering_fields = ['created_at', 'invoice_number', 'amount']
     ordering = ['-created_at']
 
     def get_queryset(self):
         return Invoice.objects.select_related(
-            'enrollment', 'student', 'payment',
+            'enrollment', 'student', 'payment', 'branch',
         )
 
 
@@ -32,7 +35,7 @@ class StudentInvoiceListAPIView(InvoiceListAPIView):
     def get_queryset(self):
         return Invoice.objects.filter(
             student_id=self.kwargs['student_pk'],
-        ).select_related('enrollment', 'student', 'payment')
+        ).select_related('enrollment', 'student', 'payment', 'branch')
 
 
 @api_view(['POST'])

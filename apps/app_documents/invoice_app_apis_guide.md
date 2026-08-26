@@ -21,10 +21,12 @@ Each invoice is sent as a **styled HTML email** (with the Skill Shikshya logo) v
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
-| GET | `/api/invoices/` | Flat list, paginated + filters | Authenticated |
-| GET | `/api/students/{student_id}/invoices/` | Per-student invoice history | Authenticated |
+| GET | `/api/invoices/` | Flat list, paginated + filters. **Branch-scoped** (`?branch_id=` for staff; non-staff locked to their branch) | Authenticated |
+| GET | `/api/students/{student_id}/invoices/` | Per-student invoice history (same branch scoping) | Authenticated |
 | POST | `/api/invoices/{id}/resend/` | Re-send email | Admin only |
 | GET/PUT | `/api/invoices/email-config/` | Read/update global email config (CC list) | Admin only |
+
+> Each invoice snapshots the `branch` of its enrollment at creation time and is included in the response as `branch` / `branch_name`.
 
 ### GET `/api/invoices/`
 

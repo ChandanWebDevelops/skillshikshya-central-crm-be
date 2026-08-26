@@ -91,6 +91,7 @@ class BackfillCommandTests(TestCase):
 
 class WatermarkSyncTests(TestCase):
     def _run_task(self, contacts, **kwargs):
+        kwargs.setdefault('force', True)  # bypass toggle; gating tested separately
         with mock.patch(
             'apps.orbitchat.client.OrbitChatClient.login', return_value='tok',
         ), mock.patch(
@@ -147,7 +148,7 @@ class WatermarkSyncTests(TestCase):
             side_effect=Exception('api down'),
         ):
             with self.assertRaises(Exception):
-                poll_orbitchat_leads_task()
+                poll_orbitchat_leads_task(force=True)
 
         SyncState.get().refresh_from_db()
         self.assertEqual(SyncState.get().last_sync_at, before)
@@ -164,3 +165,51 @@ class WatermarkSyncTests(TestCase):
         result, _ = self._run_task([contact])
         self.assertEqual(Lead.objects.count(), created_first)
         self.assertEqual(result['skipped'], 1)
+
+class SyncToggleTests(TestCase):
+    def _run_task(self, contacts, **kwargs):
+        with mock.patch(
+            'apps.orbitchat.client.OrbitChatClient.login', return_value='tok',
+        ), mock.patch(
+            'apps.orbitchat.client.OrbitChatClient.fetch_contacts',
+            return_value=contacts,
+        ):
+            return poll_orbitchat_leads_task(**kwargs)
+
+    def test_disabled_auto_run_is_noop(self):
+        state = SyncState.get()  # is_enabled defaults False
+        before = timezone.now()
+        state.last_sync_at = before
+        state.save(update_fields=['last_sync_at'])
+
+        result = self._run_task([])
+        self.assertEqual(result['status'], 'disabled')
+        state.refresh_from_db()
+        self.assertEqual(state.last_sync_at, before)
+
+    def test_enabled_runs(self):
+        state = SyncState.get()
+        state.is_enabled = True
+        state.save(update_fields=['is_enabled'])
+
+        result = self._run_task([])
+        self.assertNotEqual(result.get('status'), 'disabled')
+        self.assertTrue(result['watermark_updated'])
+
+    def test_force_bypasses_disabled(self):
+        SyncState.get()  # disabled
+
+        result = self._run_task([], force=True)
+        self.assertNotEqual(result.get('status'), 'disabled')
+
+    def test_manual_dates_respect_disabled_flag(self):
+        # manual backfills without force are also gated by the flag
+        result = self._run_task(
+            [], start_date='2026-08-01', end_date='2026-08-02',
+        )
+        self.assertEqual(result['status'], 'disabled')
+
+        forced = self._run_task(
+            [], start_date='2026-08-01', end_date='2026-08-02', force=True,
+        )
+        self.assertNotEqual(forced.get('status'), 'disabled')
