@@ -27,6 +27,7 @@ from apps.lead.serializers import (
     LeadDocumentSerializer, NotificationSerializer,
     LeadListSerializer, LeadMinSerializer,
     GlobalFollowUpSerializer, GlobalEnrollmentSerializer, GlobalPaymentSerializer,
+    GlobalCallSerializer,
 )
 from apps.lead.filters import (
     LearningModeFilter, InstitutionFilter,
@@ -36,7 +37,7 @@ from apps.lead.filters import (
     LeadCourseInterestFilter, EnrollmentFilter, PaymentFilter,
     LeadCallFilter, LeadActivityFilter, FollowUpFilter, LeadDocumentFilter,
     NotificationFilter,
-    GlobalEnrollmentFilter, GlobalPaymentFilter,
+    GlobalEnrollmentFilter, GlobalPaymentFilter, GlobalCallFilter,
 )
 from apps.global_config.pagination import CustomPagination
 from apps.global_config.permissions import IsStaffOrHasPermission
@@ -269,6 +270,31 @@ class GlobalPaymentViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return Payment.objects.select_related(
             'enrollment', 'enrollment__lead', 'enrollment__course', 'received_by', 'branch',
+        )
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsStaffOrHasPermission()]
+
+
+class GlobalCallViewSet(viewsets.ReadOnlyModelViewSet):
+    """Flat, cross-lead call log. Newest calls first by default."""
+    queryset = LeadCall.objects.none()
+    serializer_class = GlobalCallSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter, BranchFilterBackend]
+    filterset_class = GlobalCallFilter
+    search_fields = [
+        'caller', 'phone_number', 'outcome', 'notes', 'lead__full_name',
+        'lead__reference_number',
+    ]
+    ordering_fields = ['call_timestamp', 'duration_seconds', 'created_at']
+    ordering = ['-call_timestamp']
+
+    def get_queryset(self):
+        return LeadCall.objects.select_related(
+            'lead', 'created_by', 'branch',
         )
 
     def get_permissions(self):

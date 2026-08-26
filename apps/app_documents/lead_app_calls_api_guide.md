@@ -4,16 +4,54 @@
 
 ## Endpoints
 
-All endpoints are nested under a specific lead.
+All CRUD endpoints are nested under a specific lead. A flat cross-lead call log is also available.
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
-| GET | `/api/leads/{lead_id}/calls/` | List calls (paginated) | Authenticated |
+| GET | `/api/calls/` | **All calls across leads** (paginated, newest first) | Authenticated |
+| GET | `/api/leads/{lead_id}/calls/` | List calls for one lead (paginated) | Authenticated |
 | POST | `/api/leads/{lead_id}/calls/` | Add a call (consumes call minutes) | Staff or `lead.add_leadcall` permission |
 | GET | `/api/leads/{lead_id}/calls/{id}/` | Get call detail | Authenticated |
 | PATCH | `/api/leads/{lead_id}/calls/{id}/` | Update call notes/outcome etc. | Staff or `lead.change_leadcall` permission |
 
 > **DELETE is disabled** — call records are permanent and cannot be deleted via the API (`405 Method Not Allowed`), so the call-minutes ledger stays trustworthy.
+
+## Global Call Log — `GET /api/calls/`
+
+Read-only list of every call across all leads, **branch-scoped** (staff see all / `?branch_id=X`; non-staff locked to their branch). Ordered by `call_timestamp` descending by default.
+
+**Query params:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `direction` | `inbound` or `outbound` |
+| `created_by` | User ID — calls logged by that user |
+| `student` | Student ID — calls on the lead linked to that student |
+| `lead` | Lead ID |
+| `call_timestamp__gte` / `__lte` | Date/time range (ISO 8601) |
+| `search` | Matches caller, phone number, outcome, notes, lead name & reference number |
+| `ordering` | `call_timestamp`, `duration_seconds`, `created_at` (prefix `-` for desc) |
+| `page` / `page_size` | Standard pagination |
+
+**Example response row:**
+```json
+{
+    "id": 24,
+    "lead": 101,
+    "lead_name": "Sita Kumari InvoiceTest",
+    "lead_reference_number": "LD-2026-000086",
+    "call_timestamp": "2026-08-26T05:48:13Z",
+    "direction": "outbound",
+    "caller": "Shikhar",
+    "phone_number": "9877700111",
+    "duration_seconds": 270,
+    "outcome": "Interested",
+    "notes": "",
+    "branch": 1,
+    "created_by": 9,
+    "created_by_name": "Shikhar"
+}
+```
 
 The `lead` field is auto-set from the URL. `created_by` is auto-set to the requesting user.
 

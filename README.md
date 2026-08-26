@@ -241,6 +241,13 @@ Base URL: `http://localhost:8188`
 | `/api/reports/conversion/` | GET | Lead funnel + conversion rates |
 | `/api/reports/counselor-performance/` | GET | Per-counselor metrics |
 
+### Global Lists
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/followups/` , `/api/enrollments/` , `/api/payments/` | GET | Flat read-only lists across all leads |
+| `/api/calls/` | GET | All calls across leads — filters: `direction`, `created_by`, `student`, `lead`, date range, `search` |
+
 ### Invoices
 
 | Endpoint | Method | Description |

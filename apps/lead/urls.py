@@ -6,9 +6,11 @@ from apps.lead.views import (
     LeadSourceViewSet, CampaignViewSet, LeadStatusViewSet,
     LeadPriorityViewSet, LeadTagViewSet, LeadTypeViewSet, LeadViewSet,
     LeadCourseInterestViewSet, EnrollmentViewSet, PaymentViewSet,
+    GlobalCallViewSet,
     LeadCallViewSet, LeadActivityViewSet, FollowUpViewSet, LeadDocumentViewSet,
     NotificationViewSet,
     GlobalFollowUpViewSet, GlobalEnrollmentViewSet, GlobalPaymentViewSet,
+    GlobalCallViewSet,
 )
 
 router = DefaultRouter()
@@ -27,6 +29,7 @@ router.register(r'leads', LeadViewSet)
 router.register(r'followups', GlobalFollowUpViewSet)
 router.register(r'enrollments', GlobalEnrollmentViewSet)
 router.register(r'payments', GlobalPaymentViewSet)
+router.register(r'calls', GlobalCallViewSet)
 
 lead_router = DefaultRouter()
 lead_router.register(r'calls', LeadCallViewSet, basename='lead-call')

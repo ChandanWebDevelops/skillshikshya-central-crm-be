@@ -164,6 +164,19 @@ class LeadCallFilter(django_filters.FilterSet):
         fields = ['lead', 'direction', 'outcome']
 
 
+class GlobalCallFilter(django_filters.FilterSet):
+    caller = django_filters.CharFilter(lookup_expr='icontains')
+    notes = django_filters.CharFilter(lookup_expr='icontains')
+    call_timestamp__gte = django_filters.DateTimeFilter(field_name='call_timestamp', lookup_expr='gte')
+    call_timestamp__lte = django_filters.DateTimeFilter(field_name='call_timestamp', lookup_expr='lte')
+    created_by = django_filters.NumberFilter(field_name='created_by')
+    student = django_filters.NumberFilter(field_name='lead__students')
+
+    class Meta:
+        model = LeadCall
+        fields = ['lead', 'direction', 'outcome']
+
+
 class LeadActivityFilter(django_filters.FilterSet):
     title = django_filters.CharFilter(lookup_expr='icontains')
 
