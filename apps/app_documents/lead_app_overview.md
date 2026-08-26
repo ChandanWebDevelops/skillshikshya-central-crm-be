@@ -77,7 +77,17 @@ All config endpoints follow the same pattern. Config models are **not** nested �
 | POST | `/api/lead-sources/` | Create source |
 | GET/PUT/PATCH/DELETE | `/api/lead-sources/{id}/` | CRUD |
 
-**Fields:** `id`, `name`, `description`, `is_active`
+**Fields:** `id`, `name`, `description`, `is_active`, `is_protected`
+
+**Deletion rules:**
+
+| Condition | Result |
+|-----------|--------|
+| Source is referenced by any lead | `400` — *"This source is used in leads so it cannot be deleted."* |
+| `is_protected = true` (staff toggles via PATCH or Django Admin) | `400` — *"This lead source is protected and cannot be deleted."* |
+| Otherwise | deletes normally |
+
+The rule is also enforced at the model level (`ProtectedError`), so Django Admin and bulk deletes cannot bypass it.
 
 **Query params:** `?search=web&name=web&is_active=true`
 

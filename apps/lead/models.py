@@ -87,6 +87,7 @@ class LeadSource(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    is_protected = models.BooleanField(default=False)
     branch = models.ForeignKey(
         'branch.Branch', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='lead_sources',

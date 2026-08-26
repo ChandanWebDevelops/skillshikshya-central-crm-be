@@ -1,9 +1,28 @@
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
+from django.db.models import ProtectedError
 
-from apps.lead.models import Lead, Notification
+from apps.lead.models import Lead, LeadSource, Notification
 from apps.lead.tasks import send_counselor_assignment_email_task
+
+
+@receiver(pre_delete, sender=LeadSource)
+def block_restricted_source_deletion(sender, instance, **kwargs):
+    """
+    Model-level backstop: protected or in-use sources cannot be deleted,
+    even from Django Admin or bulk queryset deletes.
+    """
+    if instance.is_protected:
+        raise ProtectedError(
+            'This lead source is protected and cannot be deleted.',
+            [instance],
+        )
+    if Lead.objects.filter(source=instance).exists():
+        raise ProtectedError(
+            "This source is used in leads so it cannot be deleted.",
+            [instance],
+        )
 
 
 @receiver(post_save, sender=Lead)

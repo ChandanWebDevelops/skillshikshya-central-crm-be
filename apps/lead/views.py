@@ -99,6 +99,20 @@ class LeadSourceViewSet(ConfigViewSet):
     ordering_fields = ['id', 'name', 'is_active']
     ordering = ['name']
 
+    def destroy(self, request, *args, **kwargs):
+        source = self.get_object()
+        if source.is_protected:
+            return Response(
+                {'detail': 'This lead source is protected and cannot be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if Lead.objects.filter(source=source).exists():
+            return Response(
+                {'detail': "This source is used in leads so it cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class CampaignViewSet(ConfigViewSet):
     queryset = Campaign.objects.all()

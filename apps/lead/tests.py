@@ -57,3 +57,56 @@ class PrimaryCourseNestedTests(APITestCase):
             {'primary_course': 99999}, format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class LeadSourceDeletionTests(APITestCase):
+    def setUp(self):
+        from apps.lead.models import LeadSource
+        self.admin = User.objects.create_user(
+            email='admin@test.com', name='Admin', password='pass', is_staff=True,
+        )
+        self.client.force_authenticate(self.admin)
+        self.protected = LeadSource.objects.create(
+            name='Protected Source', is_protected=True,
+        )
+        self.used = LeadSource.objects.create(name='Used Source')
+        Lead.objects.create(full_name='Someone', phone='1', source=self.used)
+        self.free = LeadSource.objects.create(name='Free Source')
+
+    def test_protected_source_cannot_be_deleted(self):
+        response = self.client.delete(f'/api/lead-sources/{self.protected.id}/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('protected', response.data['detail'])
+        self.assertTrue(
+            __import__('apps.lead.models', fromlist=['LeadSource'])
+            .LeadSource.objects.filter(pk=self.protected.id).exists()
+        )
+
+    def test_used_source_cannot_be_deleted(self):
+        response = self.client.delete(f'/api/lead-sources/{self.used.id}/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('used in leads', response.data['detail'])
+
+    def test_unused_unprotected_source_deletes(self):
+        response = self.client.delete(f'/api/lead-sources/{self.free.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_is_protected_toggle_via_patch(self):
+        response = self.client.patch(
+            f'/api/lead-sources/{self.free.id}/',
+            {'is_protected': True}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_protected'])
+        # now deletion must be blocked
+        blocked = self.client.delete(f'/api/lead-sources/{self.free.id}/')
+        self.assertEqual(blocked.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_model_level_delete_raises_protected_error(self):
+        from django.db import transaction
+        from django.db.models import ProtectedError
+        with self.assertRaises(ProtectedError):
+            with transaction.atomic():
+                self.protected.delete()
+        with self.assertRaises(ProtectedError):
+            with transaction.atomic():
+                self.used.delete()
