@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 
+from apps.callminutes.utils import format_duration, parse_duration_to_seconds
 from apps.course.models import Course
 from apps.lead.models import (
     LearningMode, Institution, Province, City, LeadSource, Campaign, LeadStatus, LeadPriority,
@@ -217,16 +219,38 @@ class LeadSerializer(serializers.ModelSerializer):
 class LeadCallSerializer(serializers.ModelSerializer):
     caller_name = serializers.CharField(source='caller', read_only=True)
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    duration_input = serializers.CharField(write_only=True, required=False)
+    duration_formatted = serializers.SerializerMethodField()
 
     class Meta:
         model = LeadCall
         fields = '__all__'
         read_only_fields = ['lead', 'created_by', 'created_at']
 
+    def get_duration_formatted(self, obj):
+        return format_duration(obj.duration_seconds)
+
+    def to_internal_value(self, data):
+        if 'duration_input' in data and data.get('duration_input'):
+            try:
+                data['duration_seconds'] = parse_duration_to_seconds(
+                    data['duration_input'],
+                )
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({
+                    'duration_input': exc.messages[0] if exc.messages else str(exc),
+                })
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        validated_data.pop('duration_input', None)
+        return super().create(validated_data)
+
     def update(self, instance, validated_data):
         # duration_seconds and caller are locked after creation so the
         # call-minutes ledger cannot be gamed.
         validated_data.pop('duration_seconds', None)
+        validated_data.pop('duration_input', None)
         validated_data.pop('caller', None)
         return super().update(instance, validated_data)
 

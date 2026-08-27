@@ -68,12 +68,47 @@ Creating a call **deducts minutes from the requesting user's balance**:
 - Every deduction writes a row in the immutable ledger in **seconds** (see [Call Minutes](account_app_apis_guide.md#call-minutes)).
 - `duration_seconds` and `caller` are **locked after creation** — PATCH requests silently ignore changes to them.
 
+### Flexible duration input (`duration_input`)
+
+Send `duration_input` instead of `duration_seconds` — the backend parses these formats into seconds:
+
+| Input | Meaning | Stored |
+|-------|---------|--------|
+| `"4:19"` | 4 min 19 sec | `259` |
+| `"4.19"` | 4 min 19 sec (dot = MM.SS) | `259` |
+| `"04:19"` | 4 min 19 sec (leading zero) | `259` |
+| `"4m19s"` | 4 min 19 sec (suffix) | `259` |
+| `"1:02:30"` | 1 hr 2 min 30 sec | `3750` |
+| `"259"` | raw seconds | `259` |
+| `"4.5"` | 4 min **05** sec (single digit = seconds, zero-padded) | `245` |
+| `"7.89"` | **carries**: 7 min 89 sec → 8 min 29 sec | `509` |
+| `"7:89"` | carries: 8 min 29 sec | `509` |
+
+> **Overflow carry:** any seconds/minutes part ≥ 60 automatically rolls up (stopwatch style) — `7.89` → 8:29, `1:99:99` → 2:40:39.
+
+**Request:**
+```json
+{
+    "call_timestamp": "2026-08-26T05:48:00Z",
+    "caller": "Counselor",
+    "phone_number": "9800000001",
+    "duration_input": "4:19",
+    "outcome": "Interested"
+}
+```
+Invalid formats return `400 {"duration_input": ["Invalid duration format: …"]}`. The plain integer `duration_seconds` field is still accepted unchanged.
+
+### Formatted duration in responses
+
+Every call response includes `duration_formatted` (`"MM:SS"`, e.g. `"04:19"`) for display.
+
 **Example POST response (201):**
 ```json
 {
     "id": 21,
-    "duration_seconds": 90,
-    "seconds_used": 270,
+    "duration_seconds": 259,
+    "duration_formatted": "04:19",
+    "seconds_used": 259,
     "remaining_seconds": 330,
     "minutes_used": 4,
     "remaining_minutes": 5,
@@ -94,6 +129,8 @@ Creating a call **deducts minutes from the requesting user's balance**:
 | `caller` | string | Caller name |
 | `phone_number` | string | Phone number called/received |
 | `duration_seconds` | int | Duration in seconds |
+| `duration_input` | string (write-only) | Flexible duration input — accepts `"4:19"`, `"4.19"`, `"04:19"`, `"4m19s"`, raw seconds, `"H:MM:SS"`. Parsed to `duration_seconds`. |
+| `duration_formatted` | string (read-only) | Display format `"MM:SS"` (e.g. `"04:19"`) |
 | `outcome` | string | Call outcome description |
 | `notes` | text | Notes |
 | `recording_url` | string | URL to call recording |

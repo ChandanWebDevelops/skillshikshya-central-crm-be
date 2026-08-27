@@ -357,6 +357,36 @@ Each user has a `call_seconds_balance` (included in user list/detail responses, 
 | POST | `/api/users/{id}/call-minutes/add/` | Top up minutes | Admin (`is_staff`) only |
 | GET | `/api/users/{id}/call-minutes/transactions/` | Paginated ledger for a user | Admin (`is_staff`) only |
 | GET | `/api/users/me/call-minutes/` | Own balance + last 10 transactions | Authenticated |
+| GET | `/api/call-balance/` | **All active users' balances** with nested recent transactions & topups | Admin (`is_staff`) only |
+
+### GET `/api/call-balance/`
+
+Paginated over **active users**. Each row embeds the balance plus the **10 most recent** transactions and the **10 most recent** top-ops (each configurable via `?transactions_limit=` / `?topups_limit=`, capped at 50). Supports `?search=` (name/email) and `?ordering=name|-call_seconds_balance`.
+
+```json
+{
+  "count": 4,
+  "results": [
+    {
+      "id": 2,
+      "name": "Counselor",
+      "email": "counselor@example.com",
+      "call_seconds_balance": 5741,
+      "remaining_minutes": 95,
+      "balance_display": "95:41",
+      "recent_transactions": [
+        { "id": 11, "type": "deduction", "amount": -259, "amount_minutes": -4.32,
+          "balance_after": 5741, "call": 27, "created_at": "…" }
+      ],
+      "recent_topups": [
+        { "id": 7, "type": "topup", "amount": 6000, "amount_minutes": 100.0,
+          "balance_after": 6000, "note": "", "created_by_name": "Staff",
+          "created_at": "…" }
+      ]
+    }
+  ]
+}
+```
 
 ### POST `/api/users/{id}/call-minutes/add/`
 

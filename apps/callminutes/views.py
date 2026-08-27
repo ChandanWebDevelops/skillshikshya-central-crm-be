@@ -1,15 +1,24 @@
 from django.shortcuts import get_object_or_404
 
+from django.db.models import Prefetch
+
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.account.models import User
 from apps.callminutes.models import CallMinutesTransaction
-from apps.callminutes.serializers import CallMinutesTransactionSerializer
+from apps.callminutes.serializers import (
+    CallMinutesTransactionSerializer, UserCallBalanceSerializer,
+)
 from apps.callminutes.services import add_minutes
 from apps.global_config.pagination import CustomPagination
+
+DEFAULT_NESTED_LIMIT = 10
+MAX_NESTED_LIMIT = 50
 
 
 @api_view(['POST'])
@@ -57,3 +66,41 @@ def my_call_minutes(request):
         'balance_display': f'{balance // 60}:{str(balance % 60).zfill(2)}',
         'recent_transactions': CallMinutesTransactionSerializer(recent, many=True).data,
     })
+
+
+class CallBalanceListView(generics.ListAPIView):
+    """Staff-only: every active user's call balance with recent activity."""
+    serializer_class = UserCallBalanceSerializer
+    pagination_class = CustomPagination
+    permission_classes = [IsAdminUser]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'email']
+    ordering_fields = ['name', 'email', 'call_seconds_balance']
+    ordering = ['name']
+
+    def _nested_limit(self, param):
+        try:
+            return max(1, min(MAX_NESTED_LIMIT, int(self.request.query_params.get(param, DEFAULT_NESTED_LIMIT))))
+        except (TypeError, ValueError):
+            return DEFAULT_NESTED_LIMIT
+
+    def get_queryset(self):
+        transactions_limit = self._nested_limit('transactions_limit')
+        topups_limit = self._nested_limit('topups_limit')
+
+        recent_txns = CallMinutesTransaction.objects.order_by('-created_at')
+        return (
+            User.objects.filter(is_active=True)
+            .prefetch_related(
+                Prefetch(
+                    'call_minutes_transactions',
+                    queryset=recent_txns[:transactions_limit],
+                    to_attr='_recent_transactions',
+                ),
+                Prefetch(
+                    'call_minutes_transactions',
+                    queryset=recent_txns.filter(type='topup')[:topups_limit],
+                    to_attr='_recent_topups',
+                ),
+            )
+        )
