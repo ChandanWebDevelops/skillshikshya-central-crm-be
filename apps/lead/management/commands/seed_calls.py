@@ -1,4 +1,3 @@
-
 import random
 from datetime import timedelta
 
@@ -112,7 +111,13 @@ class Command(BaseCommand):
                     lead=lead,
                     call_timestamp=call_time,
                     direction=direction,
-                    caller=caller_user.get_full_name() or caller_user.get_username(),
+                    caller=(
+                        getattr(caller_user, "get_full_name", lambda: None)()
+                        or getattr(caller_user, "full_name", None)
+                        or getattr(caller_user, "name", None)
+                        or getattr(caller_user, "email", None)
+                        or caller_user.get_username()
+                    ),
                     phone_number=lead.phone or phone,
                     duration_seconds=duration,
                     outcome=outcome,
