@@ -279,6 +279,25 @@ class GlobalPaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class GlobalCallViewSet(viewsets.ReadOnlyModelViewSet):
+    @action(detail=False, methods=["get"])
+    def export_csv(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=\"calls_export.csv\""
+        writer = csv.writer(response)
+        writer.writerow([
+            "ID", "Lead Name", "Reference Number", "Call Timestamp",
+            "Direction", "Caller", "Phone Number", "Duration (Seconds)",
+            "Outcome", "Notes", "Created By", "Branch"
+        ])
+        for call in queryset.iterator(chunk_size=500):
+            writer.writerow([
+                call.id, call.lead.full_name, call.lead.reference_number, call.call_timestamp,
+                call.direction, call.caller, call.phone_number, call.duration_seconds,
+                call.outcome, call.notes, call.created_by.name if call.created_by else "",
+                call.branch.name if call.branch else ""
+            ])
+        return response
     """Flat, cross-lead call log. Newest calls first by default."""
     queryset = LeadCall.objects.none()
     serializer_class = GlobalCallSerializer
@@ -657,3 +676,51 @@ class LeadDocumentViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAuthenticated]
         return [p() for p in permission_classes]
+
+class CallSummaryViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request):
+        from django.db.models import Count, Sum, Avg
+        from django.db.models.functions import TruncDate
+        
+        calls = LeadCall.objects.all()
+        # Apply filters if needed (e.g., branch scoping)
+        # Using BranchFilterBackend logic or just filter by user's branch
+        if not request.user.is_staff and request.user.branch:
+            calls = calls.filter(branch=request.user.branch)
+            
+        stats = calls.aggregate(
+            total_calls=Count('id'),
+            total_duration=Sum('duration_seconds'),
+            avg_duration=Avg('duration_seconds')
+        )
+        
+        daily_stats = calls.annotate(date=TruncDate('call_timestamp')).values('date').annotate(count=Count('id')).order_by('date')
+        
+        return Response({
+            'total_calls': stats['total_calls'],
+            'total_duration': stats['total_duration'] or 0,
+            'avg_duration': stats['avg_duration'] or 0,
+            'daily_stats': daily_stats
+        })
+
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="calls_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Lead Name', 'Reference Number', 'Call Timestamp',
+            'Direction', 'Caller', 'Phone Number', 'Duration (Seconds)',
+            'Outcome', 'Notes', 'Created By', 'Branch'
+        ])
+        for call in queryset.iterator(chunk_size=500):
+            writer.writerow([
+                call.id, call.lead.full_name, call.lead.reference_number, call.call_timestamp,
+                call.direction, call.caller, call.phone_number, call.duration_seconds,
+                call.outcome, call.notes, call.created_by.name if call.created_by else '',
+                call.branch.name if call.branch else ''
+            ])
+        return response

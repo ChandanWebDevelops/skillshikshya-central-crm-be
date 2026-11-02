@@ -1,16 +1,16 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.lead.views import (
+    GlobalCallViewSet,
+    CallSummaryViewSet,
     LearningModeViewSet, InstitutionViewSet,
     ProvinceViewSet, CityViewSet,
     LeadSourceViewSet, CampaignViewSet, LeadStatusViewSet,
     LeadPriorityViewSet, LeadTagViewSet, LeadTypeViewSet, LeadViewSet,
     LeadCourseInterestViewSet, EnrollmentViewSet, PaymentViewSet,
-    GlobalCallViewSet,
     LeadCallViewSet, LeadActivityViewSet, FollowUpViewSet, LeadDocumentViewSet,
     NotificationViewSet,
     GlobalFollowUpViewSet, GlobalEnrollmentViewSet, GlobalPaymentViewSet,
-    GlobalCallViewSet,
 )
 
 router = DefaultRouter()
@@ -30,6 +30,7 @@ router.register(r'followups', GlobalFollowUpViewSet)
 router.register(r'enrollments', GlobalEnrollmentViewSet)
 router.register(r'payments', GlobalPaymentViewSet)
 router.register(r'calls', GlobalCallViewSet)
+router.register(r'call-summary', CallSummaryViewSet, basename='call-summary')
 
 lead_router = DefaultRouter()
 lead_router.register(r'calls', LeadCallViewSet, basename='lead-call')
